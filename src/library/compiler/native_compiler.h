@@ -9,8 +9,9 @@ Author: Jared Roesch
 #include "config.h"
 
 namespace lean {
+enum native_compiler_mode { JIT, AOT };
 void native_compile(environment const & env, config & conf, buffer<pair<name, expr>> & procs);
-void native_compile(environment const & env, config & conf, declaration const & d);
+void native_compile(environment const & env, config & conf, declaration const & d, native_compiler_mode mode);
 void initialize_native_compiler();
 void finalize_native_compiler();
 }

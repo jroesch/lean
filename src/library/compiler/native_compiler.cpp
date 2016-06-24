@@ -20,12 +20,16 @@ Author: Jared Roesch and Leonardo de Moura
 #include "library/compiler/native_compiler.h"
 #include "config.h"
 #include "cpp_emitter.h"
+#include "used_names.h"
+#include "library/extern.h"
+#include "library/vm/vm.h"
 
 namespace lean {
 class native_compiler_fn {
     environment        m_env;
     config & m_conf;
     cpp_emitter m_emitter;
+    bool m_emit_return;
 
     expr mk_local(name const & n) {
         return ::lean::mk_local(n, mk_neutral_expr());
@@ -47,20 +51,29 @@ class native_compiler_fn {
     // }
     //
     void compile_global(vm_decl const & decl, unsigned nargs, expr const * args, unsigned bpz, name_map<unsigned> const & m) {
+        name c_fn_name = decl.get_name();
+        // if (decl.is_constant_assumption()) {
+        //     c_fn_name = get_vm_builtin_internal_name(decl.get_name());
+        // } else {
+        //     c_fn_name = decl.get_name();
+        // }
+
         if (decl.get_arity() <= nargs) {
             if (decl.is_builtin()) {
                 throw exception("NYI built-in call");
                 // emit(mk_invoke_builtin_instr(decl.get_idx()));
             } else {
-                auto name = decl.get_name();
-                this->m_emitter.emit_c_call(name, nargs, args, [=] (expr const & e) {
+                this->m_emitter.emit_c_call(c_fn_name, nargs, args, [=] (expr const & e) {
                     compile(e, bpz, m);
                 });
             }
         } else {
             lean_assert(decl.get_arity() > nargs);
-            throw exception("NYI PAP call");
-            // emit(mk_closure_instr(decl.get_idx(), nargs));
+            // TODO: Not sure about this case.
+            auto name = decl.get_name();
+            this->m_emitter.emit_c_call(name, nargs, args, [=] (expr const & e) {
+                compile(e, bpz, m);
+            });
         }
     }
     //
@@ -83,8 +96,7 @@ class native_compiler_fn {
         } else if (n == get_nat_zero_name()) {
             this->m_emitter.emit_mpz(mpz(0));
         } else if (auto idx = is_internal_cnstr(e)) {
-            // emit(mk_sconstructor_instr(*idx));
-            throw exception("NYI constant");
+            this->m_emitter.emit_sconstructor(*idx);
         } else if (optional<vm_decl> decl = get_vm_decl(m_env, n)) {
             compile_global(*decl, 0, nullptr, 0, name_map<unsigned>());
         } else {
@@ -172,17 +184,19 @@ class native_compiler_fn {
 
 
     void compile_proj(expr const & e, unsigned bpz, name_map<unsigned> const & m) {
-        // buffer<expr> args;
-        // expr const & fn = get_app_args(e, args);
-        // lean_assert(is_internal_proj(fn));
-        // unsigned idx = *is_internal_proj(fn);
+        buffer<expr> args;
+        expr const & fn = get_app_args(e, args);
+        lean_assert(is_internal_proj(fn));
+        unsigned idx = *is_internal_proj(fn);
+
+        this->m_emitter.emit_projection(idx);
         // lean_assert(args.size() >= 1);
         // compile_rev_args(args.size() - 1, args.data() + 1, bpz, m);
         // bpz += args.size() - 1;
         // compile(args[0], bpz, m);
         // emit(mk_proj_instr(idx));
         // emit_apply_instr(args.size() - 1);
-            throw exception("NYI projection");
+        // throw exception("NYI projection");
     }
 
     void compile_fn_call(expr const & e, unsigned bpz, name_map<unsigned> const & m) {
@@ -195,7 +209,14 @@ class native_compiler_fn {
             throw exception("NYI call");
             return;
         } else if (is_constant(fn)) {
-            if (is_neutral_expr(fn)) {
+            if (auto n = get_vm_builtin_internal_name(const_name(fn))) {
+                std::string s("lean::");
+                s += n;
+                auto nm = name(s);
+                this->m_emitter.emit_c_call(nm, args.size(), args.data(), [=] (expr const & e) {
+                    compile(e, bpz, m);
+                });
+            } else if (is_neutral_expr(fn)) {
                 // emit(mk_sconstructor_instr(0));
                 throw exception("NYI call");
             } else if (optional<vm_decl> decl = get_vm_decl(m_env, const_name(fn))) {
@@ -244,8 +265,7 @@ class native_compiler_fn {
         if (is_nat_value(e)) {
             auto value = get_nat_value_value(e);
             std::cout << value << std::endl;
-            throw exception("NYI macro");
-            // emit(mk_num_instr(get_nat_value_value(e)));
+            this->m_emitter.emit_mpz((get_nat_value_value(e)));
         } else if (is_annotation(e)) {
             compile(get_annotation_arg(e), bpz, m);
         } else {
@@ -286,8 +306,22 @@ public:
         this->m_emitter.emit_headers();
     }
 
+    void emit_main() {
+        name main_fn(this->m_conf.m_main_fn);
+        this->m_emitter.emit_main(main_fn);
+    }
+
+    void emit_prototypes(buffer<pair<name, unsigned>> fns) {
+        for (auto fn : fns) {
+            this->m_emitter.emit_prototype(fn.first, fn.second);
+        }
+    }
+
     void operator()(name const & n, expr e) {
         this->m_emitter.emit_decl(n, e, [=] (expr e) {
+            // This is temporary hack, better way would be to annotate all
+            // terminating cf branches.
+            m_emit_return = true;
             buffer<expr> locals;
             unsigned bpz   = 0;
             unsigned arity = get_arity(e);
@@ -302,16 +336,28 @@ public:
                 e = binding_body(e);
             }
             e = instantiate_rev(e, locals.size(), locals.data());
-            compile(e, bpz, m);
+            if (this->m_emit_return) {
+                this->m_emitter.emit_return([&] () {
+                    compile(e, bpz, m);
+                });
+            } else {
+                compile(e, bpz, m);
+            }
         });
     }
 };
 
-void native_compile(environment const & env, config & conf, buffer<pair<name, expr>> & procs) {
+void native_compile(environment const & env,
+                    config & conf,
+                    buffer<pair<name, unsigned>> & extern_fns,
+                    buffer<pair<name, expr>> & procs) {
     native_compiler_fn compiler(env, conf);
 
     // Emit the header includes.
     compiler.emit_headers();
+
+    // Emit externs (currently only works for builtins).
+    compiler.emit_prototypes(extern_fns);
 
     // Iterate each processed decl, emitting code for it.
     for (auto & p : procs) {
@@ -320,12 +366,77 @@ void native_compile(environment const & env, config & conf, buffer<pair<name, ex
         expr body = p.second;
         compiler(n, body);
     }
+
+    compiler.emit_main();
 }
 
-void native_compile(environment const & env, config & conf, declaration const & d) {
-    buffer<pair<name, expr>> procs;
-    preprocess(env, d, procs);
-    native_compile(env, conf, procs);
+void native_compile(environment const & env, config & conf, declaration const & d, native_compiler_mode mode) {
+    lean_trace(name({"native_compiler"}),
+        tout() << "main_fn: " << d.get_name() << "\n";);
+
+    lean_trace(name({"native_compiler"}),
+        tout() << "main_body: " << d.get_value() << "\n";);
+
+    // Preprocess the main function.
+    buffer<pair<name, expr>> main_procs;
+    preprocess(env, d, main_procs);
+
+    if (mode == native_compiler_mode::AOT) {
+        // Compute the live set of names, for each resulting proc.
+        used_defs used_names(env);
+        for (auto pair : main_procs) {
+            used_names.names_in_expr(pair.second);
+        }
+
+        // Collect the remaining live declarations.
+        auto decls_to_compile = std::vector<declaration>();
+        used_names.m_used_names.for_each([&] (name const &n) {
+            decls_to_compile.push_back(env.get(n));
+        });
+
+        // Collect all the generated procs.
+        buffer<pair<name, expr>> all_procs;
+        buffer<pair<name, unsigned>> extern_fns;
+
+        for (auto decl : decls_to_compile) {
+            std::cout << "preproces:" << decl.get_name() << std::endl;
+            // if (is_extern(env, decl.get_name())) {
+            //     std::cout << "extern: " << std::endl;
+            //     std::cout << decl.get_name() << std::endl;
+            // } else
+
+            if (decl.is_definition()) {
+                std::cout << "preprocess_body:" << decl.get_value() << std::endl;
+
+                buffer<pair<name, expr>> procs;
+                preprocess(env, decl, procs);
+
+                for (auto p : procs) {
+                    all_procs.push_back(p);
+                }
+            } else if (decl.is_constant_assumption()) {
+                // We handle introduction rules, externs, and builtins specially.
+                if (auto n = inductive::is_intro_rule(env, decl.get_name())) {
+                    //compile_intro_rule(d);
+                } else if (is_extern(env, decl.get_name())) {
+                    std::cout << "extern: " << decl.get_name() << std::endl;
+                } else if (auto n = get_vm_builtin_internal_name(decl.get_name())) {
+                    auto arity = get_vm_builtin_arity(decl.get_name());
+                    extern_fns.push_back(pair<name, unsigned>(n, arity));
+                }
+            }
+        }
+
+        // Remember to add back the ones from main.
+        for (auto p : main_procs) {
+            all_procs.push_back(p);
+        }
+
+        native_compile(env, conf, extern_fns, all_procs);
+    } else {
+        buffer<pair<name, unsigned>> extern_fns;
+        native_compile(env, conf, extern_fns, main_procs);
+    }
 }
 
 void initialize_native_compiler() {
