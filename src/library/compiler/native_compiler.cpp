@@ -20,6 +20,7 @@ Author: Jared Roesch and Leonardo de Moura
 #include "library/compiler/native_compiler.h"
 #include "library/compiler/annotate_return.h"
 #include "library/compiler/anf_transform.h"
+#include "library/compiler/flatten_let.h"
 #include "config.h"
 #include "cpp_emitter.h"
 #include "used_names.h"
@@ -80,7 +81,8 @@ class native_compiler_fn {
         } else if (auto j = get_vm_builtin_cases_idx(m_env, n)) {
             std::cout << "got the index" << j.value() << std::endl;
         } else {
-            this->m_emitter.mangle_name(n);
+            this->m_emitter.emit_c_call(n, 0, nullptr, [=] (expr const & _e) {});
+            // this->m_emitter.mangle_name(n);
         }
         // } else if (optional<vm_decl> decl = get_vm_decl(m_env, n)) {
         //     compile_global(*decl, 0, nullptr, 0, name_map<unsigned>());
@@ -92,7 +94,7 @@ class native_compiler_fn {
     void compile_local(expr const & e, name_map<unsigned> const & m) {
         std::cout << mlocal_name(e) << std::endl;
         m.for_each([&] (name const & n, unsigned const & i) {
-            std::cout << n << " ======> " << i << std::endl;
+             std::cout << n << " ======> " << i << std::endl;
         });
         unsigned idx = *m.find(mlocal_name(e));
         this->m_emitter.emit_local(idx);
@@ -281,7 +283,7 @@ class native_compiler_fn {
         case expr_kind::Sort:     lean_unreachable();
         case expr_kind::Meta:     lean_unreachable();
         case expr_kind::Pi:       lean_unreachable();
-        case expr_kind::Lambda:   lean_unreachable();
+          case expr_kind::Lambda:   lean_unreachable();
         case expr_kind::Macro:    compile_macro(e, bpz, m);  break;
         case expr_kind::Constant: compile_constant(e);       break;
         case expr_kind::Local:    compile_local(e, m);       break;
@@ -371,7 +373,6 @@ void native_compile(environment const & env,
         lean_trace(name({"native_compiler"}), tout() << "" << p.first << "\n";);
         name & n = p.first;
         expr body = p.second;
-        std::cout << body << std::endl;
         compiler(n, body);
     }
 
@@ -379,28 +380,25 @@ void native_compile(environment const & env,
 }
 
 void native_preprocess(environment const & env, declaration const & d, buffer<pair<name, expr>> & procs) {
-    // lean_trace(name({"native_compiler"}), tout() <<
-    std::cout << "native_preprocess:" << d.get_name() << "\n";
+    lean_trace(name({"native_compiler", "preprocess"}),
+      tout() << "native_preprocess:" << d.get_name() << "\n";);
+
     buffer<pair<name, expr>> raw_procs;
     // Run the normal preprocessing and optimizations.
     preprocess(env, d, raw_procs);
 
     // Run the native specific optimizations.
     for (auto proc : raw_procs) {
-        // std::cout << "native preproc" << std::endl;
-        // std::cout << proc.second << std::endl;
         auto anf_body = anf_transform(env, proc.second);
-        // std::cout << anf_body << std::endl;
-        auto annotated_body = annotate_return(env, anf_body);
+        std::cout << anf_body << std::endl;
+        auto flatten_body = flatten_let(env, anf_body);
+        std::cout << flatten_body << std::endl;
+        auto annotated_body = annotate_return(env, flatten_body);
         std::cout << annotated_body << std::endl;
         pair<name, expr> p = pair<name, expr>(proc.first, annotated_body);
         procs.push_back(p);
     }
 }
-
-// void is_extern_function(expr & e) {
-//
-// }
 
 bool is_internal_decl(declaration const & d) {
     auto n = d.get_name();
@@ -529,6 +527,7 @@ void native_compile(environment const & env, config & conf, declaration const & 
 
 void initialize_native_compiler() {
     register_trace_class("native_compiler");
+    register_trace_class({"native_compiler", "preprocess"});
 }
 
 void finalize_native_compiler() {

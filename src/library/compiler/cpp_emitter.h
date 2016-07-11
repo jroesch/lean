@@ -142,9 +142,9 @@ namespace lean  {
         template <typename F>
         void emit_block(F block_fn) {
             *this->m_output_stream << "{\n";
-            this.indent();
+            this->indent();
             block_fn();
-            this.unindent();
+            this->unindent();
             emit_indented_line("}");
         }
 
@@ -154,7 +154,7 @@ namespace lean  {
             action(args[0]);
             this->emit_string(")->idx())");
             this->emit_block([&] () {
-                for (int i = 1; i < args.size(); i++) {
+                for (unsigned i = 1; i < args.size(); i++) {
                     this->emit_indented("case ");
                     *this->m_output_stream << i;
                     this->emit_string(":");
