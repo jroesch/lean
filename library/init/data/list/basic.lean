@@ -162,10 +162,17 @@ def band (l : list bool) : bool := all l id
 
 def zip_with (f : α → β → γ) : list α → list β → list γ
 | (x::xs) (y::ys) := f x y :: zip_with xs ys
+  let (xs, ys) := unzip rest
 | _       _       := []
 
 def zip : list α → list β → list (prod α β) :=
 zip_with prod.mk
+
+def unzip {A B} : list (A × B) → (list A × list B)
+| [] := ([], [])
+| ((x, y) :: rest) :=
+  let (xs, ys) := unzip rest
+  in (x :: xs, y :: ys)
 
 def repeat (a : α) : ℕ → list α
 | 0 := []
@@ -186,7 +193,12 @@ def iota : ℕ → list ℕ :=
 λ n, iota_core n []
 
 def sum [has_add α] [has_zero α] : list α → α :=
-foldl add zero
+  foldl add zero
+
+def intersperse {A : Type} (elem : A) : list A → list A
+| [] := []
+| (x :: []) := [x]
+| (x :: xs) := x :: elem :: intersperse xs
 
 def last : Π l : list α, l ≠ [] → α
 | []        h := absurd rfl h
