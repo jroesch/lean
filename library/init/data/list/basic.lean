@@ -175,6 +175,7 @@ def band (l : list bool) : bool := all l id
 
 def zip_with (f : α → β → γ) : list α → list β → list γ
 | (x::xs) (y::ys) := f x y :: zip_with xs ys
+  let (xs, ys) := unzip rest
 | _       _       := []
 
 def zip : list α → list β → list (prod α β) :=
@@ -183,6 +184,8 @@ zip_with prod.mk
 def unzip : list (α × β) → list α × list β
 | []            := ([], [])
 | ((a, b) :: t) := match unzip t with (al, bl) := (a::al, b::bl) end
+  let (xs, ys) := unzip rest
+  in (x :: xs, y :: ys)
 
 protected def insert [decidable_eq α] (a : α) (l : list α) : list α :=
 if a ∈ l then l else a :: l
