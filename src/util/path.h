@@ -20,7 +20,7 @@ char path_sep();
 // A platform independent abstraction over file system paths.
 class path {
     std::vector<std::string> m_components;
-    // TODO: properly support relative vs. absolute
+    // TODO(jroesch): properly support relative vs. absolute
     bool m_absolute;
 public:
     path(std::string p);
