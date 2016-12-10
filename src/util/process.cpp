@@ -41,7 +41,7 @@ void process::run() {
         buffer<char*> pargs;
 
         for (auto arg : m_args) {
-            // std::cout << arg << std::endl;
+            std::cout << arg << std::endl;
             // tried to remove the copying here, but it now crashes
             auto str = new char[arg.size() + 1];
             arg.copy(str, arg.size());
