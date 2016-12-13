@@ -8,6 +8,12 @@ import init.core init.logic init.category init.data.basic
 import init.propext init.funext init.category.combinators init.function init.classical
 import init.util init.coe init.wf init.meta init.algebra init.data
 import init.native
+import init.debugger
+
+open tactic
+/-
+  Define id_locked using meta-programming because we don't have
+  syntax for setting reducibility_hints.
 
 def debugger.attr : user_attribute :=
 { name  := `breakpoint,
