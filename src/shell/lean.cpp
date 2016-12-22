@@ -544,7 +544,6 @@ int main(int argc, char ** argv) {
             }
         }
 
-        // Options appear to be empty, pretty sure I'm making a mistake here.
         if (compile && !mods.empty()) {
             auto final_env = mods.front().second->get_produced_env();
             auto final_opts = mods.front().second->m_result.get().m_opts;
