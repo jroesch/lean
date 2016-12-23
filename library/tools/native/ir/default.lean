@@ -8,6 +8,6 @@ import init.meta.name init.meta.inductive_compiler
 
 import init.meta.rb_map
 
-import init.native.ir.ir
-import init.native.ir.context
-import init.native.ir.compiler
+import tools.native.ir.ir
+import tools.native.ir.context
+import tools.native.ir.compiler
