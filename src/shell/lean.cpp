@@ -532,8 +532,14 @@ int main(int argc, char ** argv) {
 
         std::vector<std::pair<module_id, std::shared_ptr<module_info const>>> mods;
         for (auto & mod : module_args) {
+            std::cout << "module : " << mod << std::endl;
             auto mod_info = mod_mgr.get_module(mod);
             mods.push_back({mod, mod_info});
+        }
+
+        if (compile || shared_library) {
+            auto mod_info = mod_mgr.get_module("/Users/jroesch/Git/lean/library/tools/native/default.lean");
+            mods.push_back({mod_info->m_mod, mod_info});
         }
 
         tq->join();
@@ -546,6 +552,16 @@ int main(int argc, char ** argv) {
                 ok = false;
                 // exception has already been reported
             }
+        }
+
+        auto native_env = mods.front().second->get_produced_env();
+
+        if (compile || shared_library) {
+            auto mod_info = mods.back().first;
+            auto loader = mk_loader(mod_info->m_mod, mod_info->m_deps);
+            std::vector<module_name> imports;
+            imports.push_back({{"tools", "native"}, optional<unsigned>()});
+            native_env = import_modules(native_env, mod_info->m_mod, imports, loader);
         }
 
         if (compile && !mods.empty()) {
