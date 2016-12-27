@@ -27,7 +27,6 @@ Author: Jared Roesch and Leonardo de Moura
 #include "library/util.h"
 #include "library/compiler/simp_inductive.h"
 #include "library/compiler/erase_irrelevant.h"
-#include "library/compiler/nat_value.h"
 #include "library/compiler/preprocess.h"
 #include "library/native_compiler/native_compiler.h"
 #include "library/native_compiler/options.h"
@@ -217,6 +216,15 @@ format invoke_native_compiler(
     auto conf_obj = mk_lean_native_config(mode);
 
     options opts = get_global_ios().get_options();
+
+    auto profile = native::get_config().m_native_profile;
+
+    // When in profiling mode, we need to set the proper options.
+    if (profile) {
+        opts = opts.update("profiler", true);
+        opts = opts.update({"profiler", "freq"}, 10);
+    }
+
     // env = vm_monitor_register(env, {"debugger", "monitor"});
     // lean_assert(has_monitor(env));
     vm_state S(env, opts);
@@ -232,15 +240,31 @@ format invoke_native_compiler(
     auto compiler_name = name({"native", "compile"});
     auto cc = mk_native_closure(env, compiler_name, {});
 
-    std::cout << "calling the native compiler" << std::endl;
     // We can now just use the VM to evaluate the native compiler, this should
     // handle the case where `cc` is either bytecode or native code.
-    vm_obj tactic_obj = S.invoke(
-        cc,
-        conf_obj,
-        list_of_extern_fns,
-        list_of_procs,
-        to_obj(s));
+    vm_obj tactic_obj;
+
+    if (profile) {
+        vm_state::profiler vm_profiler(S, opts);
+        tactic_obj = S.invoke(
+            cc,
+            conf_obj,
+            list_of_extern_fns,
+            list_of_procs,
+            to_obj(s));
+    } else {
+        tactic_obj = S.invoke(
+            cc,
+            conf_obj,
+            list_of_extern_fns,
+            list_of_procs,
+            to_obj(s));
+    }
+
+    // vm_profiler.stop();
+    // std::cout << "profiling" << std::endl;
+    // vm_profiler.get_snapshots().display(std::cout);
+    // std::cout << "done profiling" << std::endl;
 
     if (is_constructor(tactic_obj) && cidx(tactic_obj) == 0) {
         return to_format(cfield(tactic_obj , 0));
@@ -370,7 +394,7 @@ void decls_to_native_compile(environment const & env, buffer<declaration> & decl
     env.for_each_declaration([&] (declaration const & d) {
         auto decl_name = d.get_name();
         auto vdecl = get_vm_decl(env, d.get_name());
-        if (is_prefix_of("list", decl_name) && vdecl && vdecl->is_bytecode()) {
+        if (/* is_prefix_of("list", decl_name) && */ vdecl && vdecl->is_bytecode()) {
             decls.push_back(d);
         }
     });
