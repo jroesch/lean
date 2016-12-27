@@ -7,6 +7,7 @@ Author: Jared Roesch
 #pragma once
 #include <string>
 #include "kernel/environment.h"
+#include "library/module_mgr.h"
 #include "library/vm/vm.h"
 #include "util/path.h"
 
@@ -27,8 +28,8 @@ struct extern_fn {
 optional<extern_fn> get_builtin(name const & n);
 
 enum native_compiler_mode { Module, Executable };
-void native_compile_binary(environment const & env, declaration const & d);
-void native_compile_package(environment const & env, path root);
+void native_compile_binary(environment const & env, module_info & mod, declaration const & d);
+void native_compile_package(environment const & env, module_info & mod, path root);
 
 void initialize_native_compiler();
 void finalize_native_compiler();

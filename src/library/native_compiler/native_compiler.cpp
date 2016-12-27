@@ -243,7 +243,6 @@ format invoke_native_compiler(
     // We can now just use the VM to evaluate the native compiler, this should
     // handle the case where `cc` is either bytecode or native code.
     vm_obj tactic_obj;
-
     if (profile) {
         vm_state::profiler vm_profiler(S, opts);
         tactic_obj = S.invoke(
@@ -252,6 +251,7 @@ format invoke_native_compiler(
             list_of_extern_fns,
             list_of_procs,
             to_obj(s));
+        vm_profiler.get_snapshots().display(std::cout);
     } else {
         tactic_obj = S.invoke(
             cc,
@@ -261,19 +261,13 @@ format invoke_native_compiler(
             to_obj(s));
     }
 
-    // vm_profiler.stop();
-    // std::cout << "profiling" << std::endl;
-    // vm_profiler.get_snapshots().display(std::cout);
-    // std::cout << "done profiling" << std::endl;
-
     if (is_constructor(tactic_obj) && cidx(tactic_obj) == 0) {
         return to_format(cfield(tactic_obj , 0));
     } else if (auto except = is_tactic_exception(S, tactic_obj)) {
         auto msg = std::get<0>(*except);
-        std::cout << msg << std::endl;
-        throw "foo";
+        throw lean::exception((sstream() << msg).str());
     } else {
-        throw "blah";
+        throw lean::exception("internal complier error: unhandled result from invoking native compiler");
     }
 }
 
@@ -288,23 +282,24 @@ std::string get_code_path() {
     }
 }
 
-environment load_native_compiler(environment const & env) {
+environment load_native_compiler(environment const & env, module_info & mod) {
     std::vector<module_info::dependency> deps;
     // deps.push_back(module_info::dependency {}
-    auto loader = mk_loader("native_compiler_id", deps);
+    auto loader = mk_loader(mod.m_mod, mod.m_deps);
     std::vector<module_name> imports;
     imports.push_back({{"tools", "native"}, optional<unsigned>()});
     std::cout << "trying to import tools.native" << std::endl;
-    //return import_modules(env, "", imports, loader);
-    return env;
+    return import_modules(env, mod.m_mod, imports, loader);
+    // return env;
 }
 
 void native_compile(environment const & env_without,
+                    module_info & mod,
                     buffer<extern_fn> & extern_fns,
                     buffer<procedure> & procs,
                     native_compiler_mode mode) {
     // Ensure we have loaded tools.native.
-    auto env = load_native_compiler(env_without);
+    auto env = load_native_compiler(env_without, mod);
     std::cout << "import succeded" << std::endl;
     auto output_path = get_code_path();
     std::fstream out(output_path, std::ios_base::out);
@@ -400,7 +395,7 @@ void decls_to_native_compile(environment const & env, buffer<declaration> & decl
     });
 }
 
-void native_compile_package(environment const & env, path root) {
+void native_compile_package(environment const & env, module_info & mod, path root) {
     buffer<extern_fn> extern_fns;
     buffer<declaration> decls;
     buffer<procedure> all_procs;
@@ -414,10 +409,10 @@ void native_compile_package(environment const & env, path root) {
         all_procs.append(procs);
     }
 
-    native_compile(env, extern_fns, all_procs, native_compiler_mode::Module);
+    native_compile(env, mod, extern_fns, all_procs, native_compiler_mode::Module);
 }
 
-void native_compile_binary(environment const & env, declaration const & d) {
+void native_compile_binary(environment const & env, module_info & mod, declaration const & d) {
     lean_trace(name("native_compile"),
         tout() << "main_fn: " << d.get_name() << "\n";);
 
@@ -462,7 +457,7 @@ void native_compile_binary(environment const & env, declaration const & d) {
     // Finally we assert that there are no unprocessed declarations.
     lean_assert(used_names.stack_is_empty());
 
-    native_compile(env, extern_fns, all_procs, native_compiler_mode::Executable);
+    native_compile(env, mod, extern_fns, all_procs, native_compiler_mode::Executable);
 }
 
 void initialize_native_compiler() {

@@ -510,24 +510,27 @@ int main(int argc, char ** argv) {
         }
 
         if (compile && !mods.empty()) {
-            auto final_env = mods.front().second->get_produced_env();
-            auto final_opts = mods.front().second->m_result.get().m_opts;
+            auto module = mods.front().second;
+            auto final_env = module->get_produced_env();
+            auto final_opts = module->m_result.get().m_opts;
             type_context tc(final_env, final_opts);
             lean::scope_trace_env scope2(final_env, final_opts, tc);
             lean::native::scope_config scoped_native_config(
                 final_opts);
-            native_compile_binary(final_env, final_env.get(lean::name("main")));
+            auto tools = mod_mgr.get_module("/Users/jroesch/Git/lean/library/tools/native/default.lean");
+            native_compile_binary(final_env, const_cast<module_info &>(*tools), final_env.get(lean::name("main")));
         }
 
         if (shared_library && !mods.empty()) {
-            auto final_env = mods.front().second->get_produced_env();
-            auto final_opts = mods.front().second->m_result.get().m_opts;
+            auto module = mods.front().second;
+            auto final_env = module->get_produced_env();
+            auto final_opts = module->m_result.get().m_opts;
             type_context tc(final_env, final_opts);
             lean::scope_trace_env scope2(final_env, final_opts, tc);
             lean::native::scope_config scoped_native_config(
                 final_opts);
             auto cwd = lean::path("."); // make this work later
-            native_compile_package(final_env, cwd);
+            native_compile_package(final_env, const_cast<module_info &>(*module), cwd);
         }
 
         if (export_txt && !mods.empty()) {
