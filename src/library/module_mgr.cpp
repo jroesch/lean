@@ -362,6 +362,13 @@ std::shared_ptr<module_info const> module_mgr::get_module(module_id const & id) 
     return m_modules.at(id);
 }
 
+ std::shared_ptr<module_info const> module_mgr::resolve_and_get_module(name const & absolute_module_name) {
+     module_name to_import_mod_name = { absolute_module_name, optional<unsigned>() };
+     auto mod = resolve("", to_import_mod_name);
+     return get_module(mod);
+ }
+
+
 void module_mgr::invalidate(module_id const & id) {
     unique_lock<mutex> lock(m_mutex);
     m_current_period++;
