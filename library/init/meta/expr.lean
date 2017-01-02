@@ -86,13 +86,6 @@ meta constant expr.lower_vars    : expr → nat → nat → expr
 /- (copy_pos_info src tgt) copy position information from src to tgt. -/
 meta constant expr.copy_pos_info : expr → expr → expr
 
-meta constant expr.is_internal_cnstr : expr → option unsigned
-meta constant expr.get_nat_value : expr → option nat
-
-meta constant expr.collect_univ_params : expr → list name
-/-- `occurs e t` returns `tt` iff `e` occurs in `t` -/
-meta constant expr.occurs        : expr → expr → bool
-
 namespace expr
 open decidable
 
