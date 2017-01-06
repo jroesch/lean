@@ -10,8 +10,8 @@ import init.meta.expr
 @[reducible] meta def procedure :=
   name × expr
 
-@[reducible] def extern_fn :=
-  bool × name × unsigned
+inductive extern_fn
+| mk : bool → name → name → unsigned → extern_fn
 
 meta def procedure.to_string : procedure → string
 | (n, e) := "def " ++ to_string n ++ " := \n" ++ to_string e
