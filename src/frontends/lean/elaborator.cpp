@@ -3490,7 +3490,7 @@ expr resolve_names(environment const & env, local_context const & lctx, expr con
     return resolve_names_fn(env, lctx)(e);
 }
 
-static vm_obj tactic_save_type_info(vm_obj const & _e, vm_obj const & ref, vm_obj const & _s) {
+vm_obj tactic_save_type_info(vm_obj const & _e, vm_obj const & ref, vm_obj const & _s) {
     expr const & e = to_expr(_e);
     tactic_state const & s = to_tactic_state(_s);
     if (!get_global_info_manager() || !get_pos_info_provider()) return mk_tactic_success(s);

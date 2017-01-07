@@ -38,7 +38,7 @@ static vm_obj eval(expr const & A, expr a, tactic_state const & s) {
     LEAN_TACTIC_CATCH(s);
 }
 
-static vm_obj tactic_eval_expr(vm_obj const &, vm_obj const & A, vm_obj const & a, vm_obj const & s) {
+vm_obj tactic_eval_expr(vm_obj const &, vm_obj const & A, vm_obj const & a, vm_obj const & s) {
     return eval(to_expr(A), to_expr(a), to_tactic_state(s));
 }
 
