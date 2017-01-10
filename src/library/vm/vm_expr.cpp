@@ -425,6 +425,7 @@ void initialize_vm_expr() {
     DECLARE_VM_BUILTIN(name("mk_char_val_ne_proof"),       vm_mk_char_val_ne_proof);
     DECLARE_VM_BUILTIN(name("mk_string_val_ne_proof"),     vm_mk_string_val_ne_proof);
     DECLARE_VM_BUILTIN(name("mk_int_val_ne_proof"),        vm_mk_int_val_ne_proof);
+    DECLARE_VM_BUILTIN(name("expr", "is_choice_macro"),    expr_is_choice_macro);
 }
 
 void finalize_vm_expr() {
