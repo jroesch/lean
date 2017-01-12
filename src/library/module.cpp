@@ -614,7 +614,27 @@ modification_list parse_olean_modifications(std::vector<char> const & olean_code
     return ms;
 }
 
+// bool file_exists(std::string const & file_name)
+// {
+//     std::ifstream infile(fileName);
+//     return infile.good();
+// }
+
+typedef void (*initialize_native_library)();
+
+void native_import_module(std::string const & file_name, environment & env) {
+    auto base = std::string(file_name).erase(file_name.size() - 4, 4);
+    auto shared_library = base + "so";
+    if (std::ifstream(shared_library)) {
+        std::cout << file_name << std::endl;
+        dynamic_library lib(shared_library);
+        ((initialize_native_library)(lib.symbol("_$lean$_initialize")))();
+    }
+}
+
 void import_module(modification_list const & modifications, std::string const & file_name, environment & env) {
+    native_import_module(file_name, env);
+
     for (auto & m : modifications) {
         m->perform(env);
 
