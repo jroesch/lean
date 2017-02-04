@@ -23,6 +23,7 @@ Author: Jared Roesch
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/FileSystem.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -30,6 +31,7 @@ Author: Jared Roesch
 #include <map>
 #include <memory>
 #include <string>
+#include <fstream>
 #include <vector>
 
 namespace lean {
@@ -91,9 +93,56 @@ vm_obj global_context(vm_obj const &) {
 //     return mk_vm_simple(0);
 // }
 
+struct vm_llvm_module : public vm_external {
+    // Not sure the right way to store this, needs to stick around and be shared by all people with this handle,
+    // totally mutable, non-functional object.
+    std::shared_ptr<llvm::Module> m_val;
+
+    vm_llvm_module(std::shared_ptr<llvm::Module> const & v) : m_val(v) {}
+
+    virtual ~vm_llvm_module() {}
+    virtual void dealloc() override { this->~vm_llvm_module(); get_vm_allocator().deallocate(sizeof(vm_llvm_module), this); }
+
+    virtual vm_external * ts_clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+
+    virtual vm_external * clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+};
+
+vm_obj to_obj(std::shared_ptr<llvm::Module> const & v) {
+    return mk_vm_external(new (get_vm_allocator().allocate(sizeof(vm_llvm_module))) vm_llvm_module(v));
+}
+
+std::shared_ptr<llvm::Module> to_module(vm_obj const & o) {
+    lean_assert(is_external(o));
+    lean_assert(dynamic_cast<vm_llvm_module*>(to_external(o)));
+    return static_cast<vm_llvm_module*>(to_external(o))->m_val;
+}
+
+vm_obj llvm_module_new(vm_obj const & module_name, vm_obj const &) {
+    auto shared = std::make_shared<llvm::Module>(to_string(module_name).c_str(), *g_llvm_context);
+    return to_obj(shared);
+}
+
+vm_obj llvm_print_module(vm_obj const & path_obj, vm_obj const & mod_obj, vm_obj const &) {
+    auto path = to_string(path_obj);
+    auto module = to_module(mod_obj);
+
+    std::error_code error_code;
+    llvm::raw_fd_ostream os(path, error_code, llvm::sys::fs::OpenFlags::F_RW);
+    module->print(os, nullptr);
+
+    return mk_vm_unit();
+}
+
 void initialize_vm_llvm() {
     g_llvm_context = new llvm::LLVMContext();
     DECLARE_VM_BUILTIN(name({"llvm", "global_context"}), global_context);
+    DECLARE_VM_BUILTIN(name({"llvm", "module", "new"}), llvm_module_new);
+    DECLARE_VM_BUILTIN(name({"llvm", "module", "write_to"}), llvm_print_module);
 }
 
 void finalize_vm_llvm() {
