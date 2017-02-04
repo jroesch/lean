@@ -224,6 +224,18 @@ else()
     find_package(GMP 5.0.5 REQUIRED)
     include_directories(${GMP_INCLUDE_DIR})
     set(EXTRA_LIBS ${EXTRA_LIBS} ${GMP_LIBRARIES})
+
+    # LLVM
+    set( LLVM_DIR "${LLVM_ROOT}/share/llvm/cmake" )
+    set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_DIR} )
+    find_package(LLVM 3.9.1 REQUIRED CONFIG)
+    # include(AddLLVM)
+    add_definitions(${LLVM_DEFINITIONS})
+    include_directories(${LLVM_INCLUDE_DIRS})
+    link_directories(${LLVM_LIBRARY_DIRS})
+    llvm_map_components_to_libnames(llvm_libs support core irreader)
+
+    set(EXTRA_LIBS ${EXTRA_LIBS} ${llvm_libs})
 endif()
 
 # DL
