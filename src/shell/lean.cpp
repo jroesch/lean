@@ -254,10 +254,10 @@ public:
 };
 
 lean::environment auto_import_tools(
-    lean::environment const & env, 
-    std::shared_ptr<const lean::module_info> current_mod, 
+    lean::environment const & env,
+    std::shared_ptr<const lean::module_info> current_mod,
     std::shared_ptr<const lean::module_info> mod_to_import,
-    lean::name & import_name) 
+    lean::name & import_name)
 {
     // Copy the set of dependencies and add the module to import to the list.
     auto deps = current_mod->m_deps;
@@ -400,9 +400,6 @@ int main(int argc, char ** argv) {
             lean::enable_debug(optarg);
             break;
 #endif
-        case 'A':
-            export_all_txt = std::string(optarg);
-            break;
         case 'N':
             shared_library = true;
             break;
@@ -569,11 +566,11 @@ int main(int argc, char ** argv) {
             auto mod_to_import = mod_mgr.resolve_and_get_module(native_tools);
 
             auto native_env = auto_import_tools(
-                mods.front().second->get_produced_env(), 
-                mods.front().second, 
-                mod_to_import, 
+                mods.front().second->get_produced_env(),
+                mods.front().second,
+                mod_to_import,
                 native_tools);
-            
+
             // Setup scoped data
             auto final_opts = mods.front().second->m_result.get().m_opts;
             type_context tc(native_env, final_opts);
@@ -584,7 +581,7 @@ int main(int argc, char ** argv) {
             if (compile) {
                 native_compile_binary(native_env, native_env.get(lean::name("main")));
             }
-            
+
             if (shared_library) {
                 auto cwd = lean::path("."); // make this work later
                 native_compile_package(native_env, cwd);
