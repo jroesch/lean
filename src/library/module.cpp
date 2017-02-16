@@ -29,7 +29,7 @@ Author: Leonardo de Moura
 #include "library/kernel_serializer.h"
 #include "library/unfold_macros.h"
 #include "library/module_mgr.h"
-#include "util/dynamic_library.h"
+#include "library/native_compiler/dynamic_library.h"
 #include "library/vm/vm_native.h"
 #include "version.h"
 
@@ -675,19 +675,19 @@ modification_list parse_olean_modifications(std::vector<char> const & olean_code
 
 // TODO(@jroesch): We need check the Hash of the Lean or OLean file when doing this.
 void native_import_module(std::string const & file_name, environment & env) {
-    std::cout << "at the top of native import" << file_name << std::endl;
+    // std::cout << "at the top of native import" << file_name << std::endl;
     auto base = std::string(file_name).erase(file_name.size() - 4, 4);
     auto shared_library = base + "so";
 
     if (std::ifstream(shared_library)) {
-        std::cout << "about to open" << shared_library << std::endl;
+        // std::cout << "about to open" << shared_library << std::endl;
         dynamic_library lib(shared_library);
-        std::cout << "past it" << std::endl;
+        // std::cout << "past it" << std::endl;
 
         native_library_initializer a_cool_init_proc = (native_library_initializer)lib.symbol("_$lean$_initialize");
-        std::cout << "past symbol it" << std::endl;
+        // std::cout << "past symbol it" << std::endl;
         auto symbols = a_cool_init_proc();
-        std::cout << "past symbols it" << std::endl;
+        // std::cout << "past symbols it" << std::endl;
 
         for (auto tup : symbols.m_vector) {
             std::string olean_name = std::get<0>(tup);
@@ -695,7 +695,7 @@ void native_import_module(std::string const & file_name, environment & env) {
             std::string symbol_name = std::get<2>(tup);
             unsigned arity = std::get<3>(tup);
 
-            std::cout << "Found " << symbol_name << " in " << olean_name << std::endl;
+            // std::cout << "Found " << symbol_name << " in " << olean_name << std::endl;
 
             void * symbol = lib.symbol(symbol_name);
 
