@@ -124,6 +124,13 @@ std::shared_ptr<llvm::Module> to_module(vm_obj const & o) {
 
 vm_obj llvm_module_new(vm_obj const & module_name, vm_obj const &) {
     auto shared = std::make_shared<llvm::Module>(to_string(module_name).c_str(), *g_llvm_context);
+    llvm::IRBuilder<> builder(*g_llvm_context);
+
+  llvm::FunctionType *funcType =
+      llvm::FunctionType::get(builder.getInt32Ty(), false);
+  llvm::Function *mainFunc =
+      llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", shared.get());
+
     return to_obj(shared);
 }
 
@@ -138,11 +145,153 @@ vm_obj llvm_print_module(vm_obj const & path_obj, vm_obj const & mod_obj, vm_obj
     return mk_vm_unit();
 }
 
+struct vm_llvm_function : public vm_external {
+    // Not sure the right way to store this, needs to stick around and be shared by all people with this handle,
+    // totally mutable, non-functional object.
+    llvm::Function * m_val;
+
+    vm_llvm_function(llvm::Function * v) : m_val(v) {}
+
+    virtual ~vm_llvm_function() {
+        // delete m_val;
+    }
+
+    virtual void dealloc() override { this->~vm_llvm_function(); get_vm_allocator().deallocate(sizeof(vm_llvm_function), this); }
+
+    virtual vm_external * ts_clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+
+    virtual vm_external * clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+};
+
+vm_obj to_obj(llvm::Function * v) {
+    return mk_vm_external(new (get_vm_allocator().allocate(sizeof(vm_llvm_function))) vm_llvm_function(v));
+}
+
+llvm::Function * to_function(vm_obj const & fn_obj) {
+    lean_assert(is_external(fn_obj));
+    lean_assert(dynamic_cast<vm_llvm_function*>(to_external(fn_obj)));
+    return static_cast<vm_llvm_function*>(to_external(fn_obj))->m_val;
+}
+
+vm_obj llvm_function_create(vm_obj const & mod_obj, vm_obj const & name_obj, vm_obj const &) {
+    auto module = to_module(mod_obj);
+    auto fn_name = to_string(name_obj);
+    std::vector<llvm::Type *> args;
+    auto void_type = llvm::Type::getVoidTy(*g_llvm_context);
+    llvm::FunctionType *FT = llvm::FunctionType::get(void_type, args, false);
+
+    llvm::Function *F =
+      llvm::Function::Create(FT, llvm::Function::ExternalLinkage, fn_name, module.get());
+     lean_assert(F);
+     llvm::IRBuilder<> Builder(*g_llvm_context);
+     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*g_llvm_context, "entry", F);
+     Builder.SetInsertPoint(BB);
+     Builder.CreateRetVoid();
+    llvm::verifyFunction(*F);
+    lean_assert(module->getNamedIFunc(fn_name));
+
+    std::cout << "ABOUT TO RET" << std::endl;
+    return to_obj(F);
+}
+
+struct vm_llvm_basic_block : public vm_external {
+    // Not sure the right way to store this, needs to stick around and be shared by all people with this handle,
+    // totally mutable, non-functional object.
+    llvm::BasicBlock * m_val;
+
+    vm_llvm_basic_block(llvm::BasicBlock * v) : m_val(v) {}
+
+    virtual ~vm_llvm_basic_block() {
+        // delete m_val;
+    }
+
+    virtual void dealloc() override { this->~vm_llvm_basic_block(); get_vm_allocator().deallocate(sizeof(vm_llvm_basic_block), this); }
+
+    virtual vm_external * ts_clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+
+    virtual vm_external * clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+};
+
+vm_obj to_obj(llvm::BasicBlock * v) {
+    return mk_vm_external(new (get_vm_allocator().allocate(sizeof(vm_llvm_basic_block))) vm_llvm_basic_block(v));
+}
+
+llvm::BasicBlock * to_basic_block(vm_obj const & bb_obj) {
+    lean_assert(is_external(o));
+    lean_assert(dynamic_cast<vm_llvm_basic_block*>(to_external(bb_obj)));
+    return static_cast<vm_llvm_basic_block*>(to_external(bb_obj))->m_val;
+}
+
+struct vm_llvm_ir_builder : public vm_external {
+    // Not sure the right way to store this, needs to stick around and be shared by all people with this handle,
+    // totally mutable, non-functional object.
+    llvm::IRBuilder<> * m_val;
+
+    vm_llvm_ir_builder(llvm::IRBuilder<> * v) : m_val(v) {}
+
+    virtual ~vm_llvm_ir_builder() {
+        // delete m_val;
+    }
+
+    virtual void dealloc() override { this->~vm_llvm_ir_builder(); get_vm_allocator().deallocate(sizeof(vm_llvm_ir_builder), this); }
+
+    virtual vm_external * ts_clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+
+    virtual vm_external * clone(vm_clone_fn const &) override {
+        lean_unreachable();
+    }
+};
+
+vm_obj to_obj(llvm::IRBuilder<> * v) {
+    return mk_vm_external(new (get_vm_allocator().allocate(sizeof(vm_llvm_ir_builder))) vm_llvm_ir_builder(v));
+}
+
+vm_obj llvm_ir_builder_new(vm_obj const &) {
+    return to_obj(new llvm::IRBuilder<>(*g_llvm_context));
+}
+
+vm_obj llvm_ir_basic_block_new(
+    vm_obj const & name_obj,
+    vm_obj const & parent_opt_obj,
+    vm_obj const & basic_block_opt_obj,
+    vm_obj const &)
+{
+    auto n = to_string(name_obj);
+
+    llvm::Function * parent = nullptr;
+    if (cidx(parent_opt_obj) == 1) {
+        parent = to_function(cfield(parent_opt_obj, 0));
+    }
+
+    llvm::BasicBlock * insert_before = nullptr;
+    if (cidx(parent_opt_obj) == 1) {
+        insert_before = to_basic_block(cfield(basic_block_opt_obj, 0));
+    }
+
+    auto bb = llvm::BasicBlock::Create(*g_llvm_context, n, parent, insert_before);
+
+    return to_obj(new llvm::IRBuilder<>(*g_llvm_context));
+}
+
 void initialize_vm_llvm() {
     g_llvm_context = new llvm::LLVMContext();
     DECLARE_VM_BUILTIN(name({"llvm", "global_context"}), global_context);
     DECLARE_VM_BUILTIN(name({"llvm", "module", "new"}), llvm_module_new);
     DECLARE_VM_BUILTIN(name({"llvm", "module", "write_to"}), llvm_print_module);
+    DECLARE_VM_BUILTIN(name({"llvm", "function", "new"}), llvm_function_create);
+    DECLARE_VM_BUILTIN(name({"llvm", "basic_block", "new"}), llvm_ir_builder_new);
+    DECLARE_VM_BUILTIN(name({"llvm", "ir_builder", "new"}), llvm_ir_builder_new);
+
 }
 
 void finalize_vm_llvm() {
