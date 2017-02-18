@@ -26,3 +26,6 @@ format.print_using (to_fmt a) o
 
 meta definition pp {α : Type} [has_to_format α] (a : α) : io unit :=
 format.print (to_fmt a)
+
+/-- Lifts a monadic `io` action into the tactic monad. -/
+meta constant tactic.lift_io {A : Type} : io A → tactic A

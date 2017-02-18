@@ -688,6 +688,13 @@ vm_obj tactic_add_aux_decl(vm_obj const & n, vm_obj const & type, vm_obj const &
     }
 }
 
+/* I don't understand why the first argument isn't erased? */
+vm_obj tactic_lift_io(vm_obj const & _type, vm_obj const & action, vm_obj const & _s) {
+    tactic_state const & s = tactic::to_state(_s);
+    auto result = invoke(action, mk_vm_unit());
+    return tactic::mk_success(cfield(result, 0), s);
+}
+
 void initialize_tactic_state() {
     DECLARE_VM_BUILTIN(name({"tactic_state", "env"}),            tactic_state_env);
     DECLARE_VM_BUILTIN(name({"tactic_state", "format_expr"}),    tactic_state_format_expr);
@@ -728,6 +735,8 @@ void initialize_tactic_state() {
     DECLARE_VM_BUILTIN(name({"tactic", "open_namespaces"}),      tactic_open_namespaces);
     DECLARE_VM_BUILTIN(name({"tactic", "decl_name"}),            tactic_decl_name);
     DECLARE_VM_BUILTIN(name({"tactic", "add_aux_decl"}),         tactic_add_aux_decl);
+    DECLARE_VM_BUILTIN(name({"tactic", "lift_io"}),              tactic_lift_io);
+
 }
 
 void finalize_tactic_state() {

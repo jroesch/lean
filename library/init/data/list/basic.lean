@@ -194,11 +194,6 @@ def iota : ℕ → list ℕ :=
 def sum [has_add α] [has_zero α] : list α → α :=
   foldl add zero
 
-def intersperse {A : Type} (elem : A) : list A → list A
-| [] := []
-| (x :: []) := [x]
-| (x :: xs) := x :: elem :: intersperse xs
-
 def last : Π l : list α, l ≠ [] → α
 | []        h := absurd rfl h
 | [a]       h := a
