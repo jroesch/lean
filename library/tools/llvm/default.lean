@@ -30,4 +30,12 @@ meta constant basic_block : Type
 
 meta constant basic_block.new : string → option function → option basic_block → io basic_block
 
+meta constant ir_builder : Type
+
+meta constant ir_builder.new : io ir_builder
+
+meta constant ir_builder.set_insert_point : ir_builder → basic_block → io unit
+
+meta constant ir_builder.create_ret_void : ir_builder → io unit
+
 end llvm

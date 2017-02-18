@@ -11,6 +11,8 @@ Author: Jared Roesch
 #include "library/vm/vm.h"
 #include "library/vm/vm_string.h"
 #include "library/vm/vm_llvm.h"
+#include "library/vm/vm_io.h"
+#include "library/vm/vm_option.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -126,12 +128,12 @@ vm_obj llvm_module_new(vm_obj const & module_name, vm_obj const &) {
     auto shared = std::make_shared<llvm::Module>(to_string(module_name).c_str(), *g_llvm_context);
     llvm::IRBuilder<> builder(*g_llvm_context);
 
-  llvm::FunctionType *funcType =
-      llvm::FunctionType::get(builder.getInt32Ty(), false);
-  llvm::Function *mainFunc =
-      llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", shared.get());
+    llvm::FunctionType *funcType =
+        llvm::FunctionType::get(builder.getInt32Ty(), false);
+    llvm::Function *mainFunc =
+        llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, "main", shared.get());
 
-    return to_obj(shared);
+    return mk_io_result(to_obj(shared));
 }
 
 vm_obj llvm_print_module(vm_obj const & path_obj, vm_obj const & mod_obj, vm_obj const &) {
@@ -142,7 +144,7 @@ vm_obj llvm_print_module(vm_obj const & path_obj, vm_obj const & mod_obj, vm_obj
     llvm::raw_fd_ostream os(path, error_code, llvm::sys::fs::OpenFlags::F_RW);
     module->print(os, nullptr);
 
-    return mk_vm_unit();
+    return mk_io_result(mk_vm_unit());
 }
 
 struct vm_llvm_function : public vm_external {
@@ -185,17 +187,17 @@ vm_obj llvm_function_create(vm_obj const & mod_obj, vm_obj const & name_obj, vm_
     llvm::FunctionType *FT = llvm::FunctionType::get(void_type, args, false);
 
     llvm::Function *F =
-      llvm::Function::Create(FT, llvm::Function::ExternalLinkage, fn_name, module.get());
-     lean_assert(F);
-     llvm::IRBuilder<> Builder(*g_llvm_context);
-     llvm::BasicBlock *BB = llvm::BasicBlock::Create(*g_llvm_context, "entry", F);
-     Builder.SetInsertPoint(BB);
-     Builder.CreateRetVoid();
-    llvm::verifyFunction(*F);
-    lean_assert(module->getNamedIFunc(fn_name));
+        llvm::Function::Create(FT, llvm::Function::ExternalLinkage, fn_name, module.get());
 
-    std::cout << "ABOUT TO RET" << std::endl;
-    return to_obj(F);
+    // lean_assert(F);
+    // llvm::IRBuilder<> Builder(*g_llvm_context);
+    // llvm::BasicBlock *BB = llvm::BasicBlock::Create(*g_llvm_context, "entry", F);
+    // Builder.SetInsertPoint(BB);
+    // Builder.CreateRetVoid();
+    // llvm::verifyFunction(*F);
+    // lean_assert(module->getNamedIFunc(fn_name));
+
+    return mk_io_result(to_obj(F));
 }
 
 struct vm_llvm_basic_block : public vm_external {
@@ -257,30 +259,51 @@ vm_obj to_obj(llvm::IRBuilder<> * v) {
 }
 
 vm_obj llvm_ir_builder_new(vm_obj const &) {
-    return to_obj(new llvm::IRBuilder<>(*g_llvm_context));
+    return mk_io_result(to_obj(new llvm::IRBuilder<>(*g_llvm_context)));
 }
 
-vm_obj llvm_ir_basic_block_new(
+llvm::IRBuilder<> * to_builder(vm_obj const & builder_obj) {
+    lean_assert(is_external(o));
+    lean_assert(dynamic_cast<vm_llvm_ir_builder*>(to_external(builder_obj)));
+    return static_cast<vm_llvm_ir_builder*>(to_external(builder_obj))->m_val;
+}
+
+vm_obj llvm_ir_builder_set_insert_point(vm_obj const & builder_obj, vm_obj const & bb_obj, vm_obj const &) {
+    auto builder = to_builder(builder_obj);
+    auto bb = to_basic_block(bb_obj);
+    builder->SetInsertPoint(bb);
+    return mk_io_result(mk_vm_unit());
+}
+
+vm_obj llvm_ir_builder_create_ret_void(vm_obj const & builder_obj, vm_obj const &) {
+    auto builder = to_builder(builder_obj);
+    builder->CreateRetVoid();
+    return mk_io_result(mk_vm_unit());
+}
+
+vm_obj llvm_basic_block_new(
     vm_obj const & name_obj,
     vm_obj const & parent_opt_obj,
     vm_obj const & basic_block_opt_obj,
     vm_obj const &)
 {
+    std::cout << "About to start" << std::endl;
     auto n = to_string(name_obj);
 
     llvm::Function * parent = nullptr;
-    if (cidx(parent_opt_obj) == 1) {
-        parent = to_function(cfield(parent_opt_obj, 0));
+
+    if (!is_none(parent_opt_obj)) {
+        parent = to_function(get_some_value(parent_opt_obj));
     }
 
     llvm::BasicBlock * insert_before = nullptr;
-    if (cidx(parent_opt_obj) == 1) {
-        insert_before = to_basic_block(cfield(basic_block_opt_obj, 0));
+    if (!is_none(basic_block_opt_obj)) {
+        insert_before = to_basic_block(get_some_value(basic_block_opt_obj));
     }
 
     auto bb = llvm::BasicBlock::Create(*g_llvm_context, n, parent, insert_before);
-
-    return to_obj(new llvm::IRBuilder<>(*g_llvm_context));
+    std::cout << "About to return" << std::endl;
+    return mk_io_result(to_obj(bb));
 }
 
 void initialize_vm_llvm() {
@@ -289,9 +312,10 @@ void initialize_vm_llvm() {
     DECLARE_VM_BUILTIN(name({"llvm", "module", "new"}), llvm_module_new);
     DECLARE_VM_BUILTIN(name({"llvm", "module", "write_to"}), llvm_print_module);
     DECLARE_VM_BUILTIN(name({"llvm", "function", "new"}), llvm_function_create);
-    DECLARE_VM_BUILTIN(name({"llvm", "basic_block", "new"}), llvm_ir_builder_new);
+    DECLARE_VM_BUILTIN(name({"llvm", "basic_block", "new"}), llvm_basic_block_new);
     DECLARE_VM_BUILTIN(name({"llvm", "ir_builder", "new"}), llvm_ir_builder_new);
-
+    DECLARE_VM_BUILTIN(name({"llvm", "ir_builder", "set_insert_point"}), llvm_ir_builder_set_insert_point);
+    DECLARE_VM_BUILTIN(name({"llvm", "ir_builder", "create_ret_void"}), llvm_ir_builder_create_ret_void);
 }
 
 void finalize_vm_llvm() {
