@@ -741,6 +741,7 @@ void initialize_tactic_state() {
     DECLARE_VM_BUILTIN(name({"tactic", "decl_name"}),            tactic_decl_name);
     DECLARE_VM_BUILTIN(name({"tactic", "add_aux_decl"}),         tactic_add_aux_decl);
     DECLARE_VM_BUILTIN(name({"tactic", "run_io"}),               tactic_run_io);
+
 }
 
 void finalize_tactic_state() {
