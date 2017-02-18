@@ -29,3 +29,10 @@ format.print (to_fmt a)
 
 /-- Lifts a monadic `io` action into the tactic monad. -/
 meta constant tactic.lift_io {A : Type} : io A → tactic A
+
+/- Not great, but temp. -/
+meta constant write_file_core : forall (path : string) (contents : string), io unit
+
+-- why does this have to be meta?f
+meta def write_file {S : Type} [has_to_string S] (path : string) (contents : S) : io unit :=
+  write_file_core path (to_string contents)
