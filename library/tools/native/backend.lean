@@ -11,6 +11,8 @@ namespace ir
 meta structure backend :=
     -- TODO: we should unify context with the list of items to process
     -- this is just due to the poor design of the compiler
+    (registry_name : name)
+    (flag : string)
     (compiler : native.ir.context → io unit)
 
 end ir

@@ -19,16 +19,13 @@ import tools.native.anf
 import tools.native.cf
 import tools.native.backend
 
--- import tools.native.lift_switch
 import tools.native.pass
 import tools.native.util
 import tools.native.config
 import tools.native.result
 import tools.native.attributes
-
--- import init.debugger
--- import init.debugger.cli
--- set_option debugger true
+import tools.native.llvm
+import system.io
 
 namespace native
 
@@ -861,6 +858,7 @@ meta def new_context : tactic ir.context := do
 
 meta def load_backends : tactic (list ir.backend) := do
   backends_list_expr ← get_backends,
+  tactic.trace backends_list_expr,
   eval_expr (list ir.backend) backends_list_expr
 
 meta def execute_backend (ctxt : ir.context) (backend : ir.backend) : tactic unit := do
@@ -869,6 +867,9 @@ meta def execute_backend (ctxt : ir.context) (backend : ir.backend) : tactic uni
 
 meta def execute_backends (backends : list ir.backend) (ctxt : ir.context) : tactic unit :=
   monad.mapm (execute_backend ctxt) backends >> return ()
+
+@[backend] meta def llvm_backend : ir.backend :=
+    ⟨ `llvm_backend, "llvm", llvm_compiler ⟩
 
 meta def compile
   (conf : config)
