@@ -12,6 +12,8 @@ Author: Jared Roesch
 #include <unistd.h>
 #if defined(LEAN_WINDOWS) && !defined(LEAN_CYGWIN)
 #include <windows.h>
+#include <Fcntl.h>
+#include <io.h>
 #include <tchar.h>
 #include <stdio.h>
 #include <strsafe.h>
@@ -53,67 +55,137 @@ process & process::set_stderr(stdio cfg) {
 #if defined(LEAN_WINDOWS) && !defined(LEAN_CYGWIN)
 
 HANDLE to_win_handle(FILE * file) {
-    return _get_osfhandle(fileno(file));
+    intptr_t handle = _get_osfhandle(fileno(file));
+    return reinterpret_cast<HANDLE>(handle);
 }
 
 FILE * from_win_handle(HANDLE handle, char const * mode) {
-    return fd_open_open_osfhandle(reinterpret_cast<int_ptr_t>(handle));
+    int fd = _open_osfhandle(reinterpret_cast<intptr_t>(handle), _O_APPEND);
+    return fdopen(fd, mode);
 }
 
-void create_child_process(HANDLE hstdin, HANDLE hstdout, HANDLE hstderr);
+void create_child_process(std::string cmd_name, HANDLE hstdin, HANDLE hstdout, HANDLE hstderr);
+
+// TODO(@jroesch): unify this code between platforms better.
+static optional<pipe> setup_stdio(SECURITY_ATTRIBUTES * saAttr, optional<stdio> cfg) {
+    /* Setup stdio based on process configuration. */
+    if (cfg) {
+        switch (*cfg) {
+        /* We should need to do nothing in this case */
+        case stdio::INHERIT:
+            return optional<pipe>();
+        case stdio::PIPED: {
+            HANDLE readh;
+            HANDLE writeh;
+            if (!CreatePipe(&readh, &writeh, saAttr, 0))
+                throw new exception("unable to create pipe");
+            return optional<pipe>(lean::pipe(readh, writeh));
+        }
+        case stdio::NUL: {
+            /* We should map /dev/null. */
+            return optional<pipe>();
+        }
+        default:
+           lean_unreachable();
+        }
+    } else {
+        return optional<pipe>();
+    }
+}
 
 // This code is adapted from: https://msdn.microsoft.com/en-us/library/windows/desktop/ms682499(v=vs.85).aspx
 child process::spawn() {
+   HANDLE child_stdin = stdin;
+   HANDLE child_stdout = stdout;
+   HANDLE child_stderr = stderr;
+   
    SECURITY_ATTRIBUTES saAttr;
-   HANDLE child_stdin_read = NULL;
-   HANDLE child_stdin_write = NULL;
-   HANDLE child_stdout_read = NULL;
-   HANDLE child_stdout_write = NULL;
-
+   
    // Set the bInheritHandle flag so pipe handles are inherited.
    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
    saAttr.bInheritHandle = TRUE;
    saAttr.lpSecurityDescriptor = NULL;
 
+   auto stdin_pipe = setup_stdio(&saAttr, m_stdin);
+   auto stdout_pipe = setup_stdio(&saAttr, m_stdout);
+   auto stderr_pipe = setup_stdio(&saAttr, m_stderr);
+
    // Create a pipe for the child process's STDOUT.
-   if ( ! CreatePipe(&child_stdout_read, &child_stdout_write, &saAttr, 0) )
-      throw new exception("unable to construct stdout pipe");
+   if (stdout_pipe) {
+       // Ensure the read handle to the pipe for STDOUT is not inherited.
+       if (!SetHandleInformation(stdout_pipe->m_read_fd, HANDLE_FLAG_INHERIT, 0))
+           throw new exception("unable to configure stdout pipe");
+       child_stdin = stdin_pipe->m_write_fd;
+   }
 
-   // Ensure the read handle to the pipe for STDOUT is not inherited.
-   if ( ! SetHandleInformation(child_stdout_read, HANDLE_FLAG_INHERIT, 0) )
-      throw new exception("unable to configure stdout pipe");
+   if (stderr_pipe) {
+       // Ensure the read handle to the pipe for STDOUT is not inherited.
+       if (!SetHandleInformation(stderr_pipe->m_read_fd, HANDLE_FLAG_INHERIT, 0))
+           throw new exception("unable to configure stdout pipe");
+       child_stdout = stdout_pipe->m_read_fd;
+   }
 
-    // Create a pipe for the child process's STDIN.
-   if (! CreatePipe(&child_stdin_read, &child_stdin_write, &saAttr, 0))
-      throw new exception("unable to construct stdin pipe");
+   if (stdin_pipe) {
+       // Ensure the write handle to the pipe for STDIN is not inherited.
+       if (!SetHandleInformation(stdin_pipe->m_write_fd, HANDLE_FLAG_INHERIT, 0))
+           throw new exception("unable to configure stdin pipe");
+       child_stderr = stderr_pipe->m_read_fd;
+   }
 
-   // Ensure the write handle to the pipe for STDIN is not inherited.
-   if ( ! SetHandleInformation(child_stdin_write, HANDLE_FLAG_INHERIT, 0) )
-      throw new exception("unable to configure stdin pipe");
+   std::string command;
+
+   // This needs some thought, on Windows we must pass a command string
+   // which is a valid command, that is a fully assembled command to be executed.
+   //
+   // We must escape the arguments to preseving spacing and other characters,
+   // we might need to revisit escaping here.
+   bool once_through = false;
+   for (auto arg : m_args) {
+       if (once_through) {
+           command += " \"";
+       }
+       command += arg;
+       if (once_through) {
+           command += "\"";
+       }
+       once_through = true;
+   }
 
    // Create the child process.
-   create_child_process(child_stdin_read, child_stdout_write, child_stdout_write);
+   create_child_process(command, child_stdin, child_stdout, child_stdout);
 
-   return child(0, 
-        std::make_shared<handle>(from_win_handle(child_stdin_write)),
-        std::make_shared<handle>(from_win_handle(child_stdout_read)),
-        std::make_shared<handle>(from_win_handle(child_stdout_read))); 
+   if (stdin_pipe) {
+       CloseHandle(stdin_pipe->m_read_fd);
+   }
+
+   if (stdout_pipe) {
+       CloseHandle(stdout_pipe->m_write_fd);
+   }
+
+   if (stderr_pipe) {
+       CloseHandle(stderr_pipe->m_write_fd);
+   }
+
+   return child(
+       0,
+       std::make_shared<handle>(from_win_handle(child_stdin, "w")),
+       std::make_shared<handle>(from_win_handle(child_stdout, "r")),
+       std::make_shared<handle>(from_win_handle(child_stderr, "r")));
 }
 
-void create_child_process(HANDLE hstdin, HANDLE hstdout, HANDLE hstderr)
+void create_child_process(std::string command, HANDLE hstdin, HANDLE hstdout, HANDLE hstderr)
 // Create a child process that uses the previously created pipes for STDIN and STDOUT.
 {
-   TCHAR szCmdline[]=TEXT("child");
+   // TCHAR szCmdline[] =TEXT("echo \"Hello\"");
    PROCESS_INFORMATION piProcInfo;
    STARTUPINFO siStartInfo;
    BOOL bSuccess = FALSE;
 
-// Set up members of the PROCESS_INFORMATION structure.
-
+   // Set up members of the PROCESS_INFORMATION structure.
    ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 
-// Set up members of the STARTUPINFO structure.
-// This structure specifies the STDIN and STDOUT handles for redirection.
+   // Set up members of the STARTUPINFO structure.
+   // This structure specifies the STDIN and STDOUT handles for redirection.
 
    ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
    siStartInfo.cb = sizeof(STARTUPINFO);
@@ -122,18 +194,19 @@ void create_child_process(HANDLE hstdin, HANDLE hstdout, HANDLE hstderr)
    siStartInfo.hStdInput = hstdin;
    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-// Create the child process.
-
-   bSuccess = CreateProcess(NULL,
-      szCmdline,     // command line
-      NULL,          // process security attributes
-      NULL,          // primary thread security attributes
-      TRUE,          // handles are inherited
-      0,             // creation flags
-      NULL,          // use parent's environment
-      NULL,          // use parent's current directory
-      &siStartInfo,  // STARTUPINFO pointer
-      &piProcInfo);  // receives PROCESS_INFORMATION
+   // Create the child process.
+   // std::cout << command << std::endl;
+   bSuccess = CreateProcess(
+       NULL,
+       const_cast<char *>(command.c_str()), // command line
+       NULL,                                // process security attributes
+       NULL,                                // primary thread security attributes
+       TRUE,                                // handles are inherited
+       0,                                   // creation flags
+       NULL,                                // use parent's environment
+       NULL,                                // use parent's current directory
+       &siStartInfo,                        // STARTUPINFO pointer
+       &piProcInfo);                        // receives PROCESS_INFORMATION
 
    // If an error occurs, exit the application.
    if (!bSuccess) {

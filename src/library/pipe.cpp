@@ -7,7 +7,12 @@ Author: Jared Roesch
 
 #include "library/pipe.h"
 #include "util/exception.h"
+
+
+#if defined(LEAN_WINDOWS) && !defined(LEAN_CYGWIN)
+#else
 #include <unistd.h>
+#endif
 
 namespace lean {
 
