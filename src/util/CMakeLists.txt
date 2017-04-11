@@ -5,7 +5,6 @@ add_library(util OBJECT debug.cpp name.cpp name_set.cpp fresh_name.cpp
   bitap_fuzzy_search.cpp init_module.cpp thread.cpp memory_pool.cpp
   utf8.cpp name_map.cpp list_fn.cpp null_ostream.cpp file_lock.cpp
   timer.cpp task.cpp task_builder.cpp cancellable.cpp
-  small_object_allocator.cpp subscripted_name_set.cpp process.cpp
-=======
-  log_tree.cpp
-  small_object_allocator.cpp subscripted_name_set.cpp parser_exception.cpp path.cpp path_var.cpp)
+  small_object_allocator.cpp subscripted_name_set.cpp
+  log_tree.cpp small_object_allocator.cpp
+  parser_exception.cpp path.cpp path_var.cpp)

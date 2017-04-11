@@ -37,7 +37,7 @@ struct module_info {
         module_name m_import_name;
         std::shared_ptr<module_info const> m_mod_info;
     };
-    
+
     std::vector<dependency> m_deps;
 
     optional<std::string> m_lean_contents;
@@ -75,6 +75,7 @@ public:
 };
 
 module_loader mk_loader(module_id const & cur_mod, std::vector<module_info::dependency> const & deps);
+module_id resolve(module_id const & module_file_name, module_name const & ref);
 
 class module_mgr {
     bool m_use_snapshots = false;
@@ -105,8 +106,6 @@ public:
     void invalidate(module_id const & id);
 
     std::shared_ptr<module_info const> get_module(module_id const &);
-    std::shared_ptr<module_info const> resolve_and_get_module(name const & absolute_module_name);
-
     void cancel_all();
 
     void set_use_snapshots(bool use_snapshots) { m_use_snapshots = use_snapshots; }
