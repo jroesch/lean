@@ -182,9 +182,10 @@ zip_with prod.mk
 
 def unzip : list (α × β) → list α × list β
 | []            := ([], [])
-| ((a, b) :: t) := match unzip t with (al, bl) := (a::al, b::bl) end
-  let (xs, ys) := unzip rest
-  in (x :: xs, y :: ys)
+| ((a, b) :: t) :=
+match unzip t with
+| (al, bl) := (a::al, b::bl)
+end
 
 protected def insert [decidable_eq α] (a : α) (l : list α) : list α :=
 if a ∈ l then l else a :: l
