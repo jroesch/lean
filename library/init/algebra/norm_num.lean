@@ -178,6 +178,14 @@ lemma bit1_add_bit1_helper [add_comm_semigroup α] [has_one α] (a b t s : α)
         (h : (a + b) = t) (h2 : add1 t = s) : bit1 a + bit1 b = bit0 s :=
 begin rw -h at h2, rw -h2, usimp end
 
+lemma bit1_add_bit1_helper' [add_comm_semigroup α] [has_one α] (a b t : α)
+        (h : (a + b) = t) : bit1 a + bit1 b = bit0 (t + 1) :=
+begin
+  rw -h,
+  unfold bit1 bit0,
+  simp,
+ end
+
 lemma bin_add_zero [add_monoid α] (a : α) : a + zero = a :=
 by simp
 
@@ -193,12 +201,39 @@ rfl
 lemma bit1_add_one [has_add α] [has_one α] (a : α) : bit1 a + one = add1 (bit1 a) :=
 rfl
 
+lemma bit1_add_one' [has_add α] [has_one α] (a : α) : bit1 a + one = (bit1 a) + 1 :=
+rfl
+
 lemma bit1_add_one_helper [has_add α] [has_one α] (a t : α) (h : add1 (bit1 a) = t) :
         bit1 a + one = t :=
 by rw -h
 
+lemma bit1_add_one_helper' [add_comm_semigroup α] [has_one α] (a t : α) :
+        bit1 a + one = one + (bit1 a) :=
+begin
+  rw add_comm,
+end
+
 lemma one_add_bit1 [add_comm_semigroup α] [has_one α] (a : α) : one + bit1 a = add1 (bit1 a) :=
 begin unfold bit0 bit1 add1, simp end
+
+#check @eq.rec
+
+lemma bit1_one_add' [add_comm_semigroup α] [has_one α] (a t : α) (h : a + 1 = t) :
+bit1 a + one = bit0 t :=
+begin
+  unfold bit0 bit1,
+  rw -h,
+  simp,
+end
+
+lemma one_add_bit1' [add_comm_semigroup α] [has_one α] (a t : α) (h : a + 1 = t) :
+one + bit1 a = bit0 t :=
+begin
+  unfold bit0 bit1,
+  rw -h,
+  simp,
+end
 
 lemma one_add_bit1_helper [add_comm_semigroup α] [has_one α] (a t : α)
         (h : add1 (bit1 a) = t) : one + bit1 a = t :=
