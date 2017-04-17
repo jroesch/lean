@@ -32,6 +32,10 @@ meta def normalize (e : expr) : normalizer_m (expr × expr) :=
 do st ← state_t.read,
    st.normalizer e
 
+meta def current_ty : normalizer_m expr :=
+do st ← state_t.read,
+   return $ st.current_ty
+
 open bit_view
 
 meta def normalize_add (norm_value : expr) : expr → expr → normalizer_m (expr × expr) :=
@@ -105,6 +109,16 @@ else normalize_add norm_value lhs rhs
 
 set_option eqn_compiler.max_steps 2048
 
+meta def normalize_sub (norm_value a b : expr) : normalizer_m (expr × expr) :=
+do ty ← current_ty,
+   if ty = ```(nat)
+   then fail "nat sub"
+   else do
+     sum ← to_expr ``(%%a + (- %%b)),
+     (nval, prf) ← normalize sum,
+     final_prf ← to_expr ``(@subst_into_subtr %%ty _ %%a %%b %%(nval) %%(prf)),
+     return (norm_value, final_prf)
+
 meta def numeric_normalize : expr → tactic (expr × expr) :=
 fun e,
 if false -- fix this
@@ -116,25 +130,19 @@ in match opt_norm_value with
 | some norm_int :=
 do ty ← infer_type e,
    norm_value ← expr_of_int ty norm_int,
+   in_normalizer_m ⟨ numeric_normalize, ty ⟩ $
    match e with
    | ```(%%a + %%b) := do
-     lhs ← numeric_normalize a,
-     rhs ← numeric_normalize b,
+     lhs ← normalize a,
+     rhs ← normalize b,
      in_normalizer_m ⟨ numeric_normalize, ty ⟩ $ do
        (_, prf) ← normalize_add_cases norm_value lhs.fst rhs.fst,
        final_prf ← to_expr ``(@subst_into_sum %%ty _ %%a %%b %%(lhs.fst) %%(rhs.fst) %%norm_value %%(lhs.snd) %%(rhs.snd) %%prf),
        return (norm_value, final_prf)
-   | ```(%%a - %%b) :=
-        in_normalizer_m ⟨ numeric_normalize, ty ⟩ $
-          if ty = ```(nat)
-          then fail "nat sub"
-          else do
-            sum ← to_expr ``(%%a + (- %%b)),
-            (nval, prf) ← numeric_normalize sum,
-            final_prf ← to_expr ``(@subst_into_subtr %%ty _ %%a %%b %%(nval) %%(prf)),
-            return (norm_value, final_prf)
+   | ```(%%a - %%b) := normalize_sub norm_value a b
    | ```(%%a * %%b) := fail "mul"
    | ```(%%a / %%b) := fail "div"
+   | ```(- %%a) := fail "neg"
    | ```(bit0 %%bits) := do
      (nval, prf) ← numeric_normalize bits,
      final_prf ← to_expr ``(bit0_congr %%bits %%nval %%prf),
