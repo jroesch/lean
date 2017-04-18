@@ -50,6 +50,9 @@ begin
     rw a,
 end
 
+lemma neg_congr [has_neg α] (bits bits' : α) (h : bits = bits') : neg bits = neg bits' :=
+by rw -h
+
 lemma subst_into_subtr [add_group α] (l r t : α) (h : l + -r = t) : l - r = t :=
 by simp [h]
 
@@ -98,11 +101,42 @@ begin
   simp,
 end
 
-lemma bit1_add_bit1 [add_comm_semigroup α] [has_one α] (a b r : α) (h : a + b = r) : bit1 a + bit1 b = bit0 (r + 1) :=
+lemma bit1_add_bit1 [add_comm_semigroup α] [has_one α] (a b r : α) (h : a + b + 1 = r) : bit1 a + bit1 b = bit0 r :=
 begin
   unfold bit1 bit0,
   rw -h,
   simp,
+end
+
+lemma neg_neg_helper [add_group α] (a b : α) (h : a = -b) : -a = b :=
+by simp [h]
+
+lemma neg_add_neg [add_comm_group α] (a b c : α) (h : a + b = c) : -a + -b = -c :=
+begin apply @neg_inj α, simp [neg_add, neg_neg], assumption end
+
+lemma pos_add_neg [add_comm_group α] (a b c : α) (h : c + b = a) : a + -b = c :=
+begin
+rw -h,
+simp
+end
+
+lemma neg_add_pos [add_comm_group α] (a b c : α) (h : c + a = b) : -a + b = c :=
+begin
+rw -h,
+simp
+end
+
+lemma neg_zero [add_group α] (a : α) (h : a = 0) : - a = 0 :=
+begin rw h, simp end
+
+lemma nat_sub_zero {a b c d: ℕ} (hac : a = c) (hbd : b = d) (hcd : c < d) : a - b = 0 :=
+begin
+ simp_using_hs, apply nat.sub_eq_zero_of_le, apply le_of_lt, assumption
+end
+
+lemma nat_sub_pos {a b c d e : ℕ} (hac : a = c) (hbd : b = d) (hced : e + d = c) : a - b = e :=
+begin
+simp_using_hs, rw [-hced, nat.add_sub_cancel]
 end
 
 end lemmas

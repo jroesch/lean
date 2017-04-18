@@ -29,6 +29,7 @@ meta def as_int : expr → option int
      b' ← as_int b,
      return $ a' - b'
 | ```(%%a / %%b) := none
+| ```(neg %%a) := neg <$> as_int a
 | _ := none
 
 meta def expr_of_nat (ty : expr) : nat → tactic expr
@@ -43,13 +44,21 @@ meta def expr_of_nat (ty : expr) : nat → tactic expr
 meta def expr_of_int (ty : expr) : int → tactic expr
 | (int.of_nat n) := expr_of_nat ty n
 | (int.neg_succ_of_nat n) :=
-expr_of_nat ty n >>= fun i, to_expr ``(- %%i)
+expr_of_nat ty (n + 1) >>= fun i, to_expr ``(- %%i)
 
 meta def is_numeral (e : expr) : bool :=
 (as_int e).is_some
 
 meta def is_div : expr → bool
 | ```(%%a / %%b) := tt
+| _ := ff
+
+meta def is_neg : expr → bool
+| ```(- %%a) := tt
+| _ := ff
+
+meta def is_zero : expr → bool
+| ```(zero) := tt
 | _ := ff
 
 /-- A view on the bits of the operands, pattern matching many times directly on expression is
