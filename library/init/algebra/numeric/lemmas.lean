@@ -10,10 +10,7 @@ namespace lemmas
 universe u
 variable {α : Type u}
 
-def add1 [has_add α] [has_one α] (a : α) : α :=
-a + 1
-
-local attribute [reducible] bit0 bit1 add1
+local attribute [reducible] bit0 bit1
 local attribute [simp] right_distrib left_distrib
 
 private meta def u : tactic unit :=
@@ -80,7 +77,7 @@ begin
     rsimp,
 end
 
-lemma bit0_add_bit0 [add_comm_semigroup α] [has_one α] (a b r : α) (h : a + b = r) : bit0 a + bit0 b = bit0 r :=
+lemma bit0_add_bit0 [add_comm_semigroup α] (a b r : α) (h : a + b = r) : bit0 a + bit0 b = bit0 r :=
 begin
   unfold bit1 bit0,
   rw -h,
@@ -134,10 +131,16 @@ begin
  simp_using_hs, apply nat.sub_eq_zero_of_le, apply le_of_lt, assumption
 end
 
-lemma nat_sub_pos {a b c d e : ℕ} (hac : a = c) (hbd : b = d) (hced : e + d = c) : a - b = e :=
+lemma nat_sub_pos (a b c d e : ℕ) (hac : a = c) (hbd : b = d) (hced : e + d = c) : a - b = e :=
 begin
 simp_using_hs, rw [-hced, nat.add_sub_cancel]
 end
+
+lemma mul_zero [add_monoid α] (a : α) : a * zero = zero :=
+by simp
+
+lemma zero_mul [add_monoid α] (a : α) : zero + a = a :=
+by simp
 
 end lemmas
 end numeric

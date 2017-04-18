@@ -9,35 +9,39 @@ import init.algebra.numeric.lemmas
 import init.algebra.numeric.util
 import init.algebra.numeric.monad
 import init.algebra.numeric.add
+import init.algebra.numeric.mul
 
 namespace algebra
 
 open tactic
 open numeric.lemmas
 
+meta def cast_int : int → tactic nat
+| (int.of_nat n) := return n
+| _ := fail "can not convert int to nat"
+
 meta def normalize_nat_sub (norm_value a b : expr) : normalizer_m (expr × expr) := do
   a' ← normalize a,
   b' ← normalize b,
-  let ints := (do ai ← as_int a'.fst, bi ← as_int b'.fst, return (ai, bi)),
-  match ints with
-  | some (a_int, b_int) := do
-    if b_int < a_int
-    then do
-      sum ← to_expr ``(%%(a'.fst) + %%(b'.fst)),
-      rprf ← normalize sum,
-      final_prf ← to_expr ``(@nat_sub_pos %%a %%b %%(a'.fst) %%(b'.fst) %%norm_value %%(a'.snd) %%(b'.snd) %%(rprf.snd)),
-      return (norm_value, final_prf)
-    else do
-      final_prf ← to_expr ``(@nat_sub_zero %%a %%b %%(a'.fst) %%(b'.fst) %%(a'.snd) %%(b'.snd) sorry),
-      return (norm_value, final_prf)
-  | none := tactic.fail "args aren't nats"
-  end
+  a_int ← as_int a'.fst,
+  b_int ← as_int b'.fst,
+  if b_int < a_int
+  then do
+    sum ← to_expr ``(@add nat _ %%norm_value %%(b'.fst)),
+    trace $ to_string sum,
+    rprf ← normalize sum,
+    final_prf ← to_expr ``(nat_sub_pos %%a %%b %%(a'.fst) %%(b'.fst) %%norm_value %%(a'.snd) %%(b'.snd) %%(rprf.snd)),
+    return (norm_value, final_prf)
+  else do
+    final_prf ← to_expr ``(@nat_sub_zero %%a %%b %%(a'.fst) %%(b'.fst) %%(a'.snd) %%(b'.snd) sorry),
+    return (norm_value, final_prf)
 
 meta def normalize_sub (norm_value a b : expr) : normalizer_m (expr × expr) :=
 do ty ← current_ty,
    if ty = ```(nat)
    then normalize_nat_sub norm_value a b
    else do
+     trace "norm sub",
      sum ← to_expr ``(%%a + (- %%b)),
      (nval, prf) ← normalize sum,
      final_prf ← to_expr ``(@subst_into_subtr %%ty _ %%a %%b %%(nval) %%(prf)),
@@ -61,19 +65,16 @@ fun e,
 if false -- fix this
 then mk_eq_refl e >>= fun prf, return $ (e, prf)
 else
-let opt_norm_value := as_int e
-in match opt_norm_value with
-| none := fail $ "unable to normalize the expression: " ++ to_string e
-| some norm_int :=
-do ty ← infer_type e,
+do norm_int ← as_int e,
+   ty ← infer_type e,
    norm_value ← expr_of_int ty norm_int,
    in_normalizer_m ⟨ numeric_normalize, ty ⟩ $
    match e with
    | ```(%%a + %%b) := normalize_add norm_value a b
    | ```(%%a - %%b) := normalize_sub norm_value a b
-   | ```(%%a * %%b) := fail "mul"
+   | ```(%%a * %%b) := normalize_mul norm_value a b
    | ```(%%a / %%b) := fail "div"
-   | ```(- %%a) := normalize_neg norm_value a
+   | ```(neg %%a) := normalize_neg norm_value a
    | ```(bit0 %%bits) := do
      (nval, prf) ← numeric_normalize bits,
      final_prf ← to_expr ``(bit0_congr %%bits %%nval %%prf),
@@ -84,6 +85,5 @@ do ty ← infer_type e,
      return (norm_value, final_prf)
    | e := mk_eq_refl e >>= fun prf, return $ (e, prf)
    end
-end
 
 end algebra

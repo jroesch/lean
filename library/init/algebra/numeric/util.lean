@@ -7,7 +7,7 @@ import init.data.int
 
 open tactic
 
-meta def as_int : expr → option int
+meta def as_int : expr → tactic int
 | ```(zero) := some 0
 | ```(one) := some 1
 | ```(bit0 %%bits) :=
@@ -27,27 +27,32 @@ meta def as_int : expr → option int
 | ```(%%a - %%b) :=
   do a' ← as_int a,
      b' ← as_int b,
-     return $ a' - b'
-| ```(%%a / %%b) := none
+     ty ← infer_type a,
+     if ty = ```(nat)
+     then return $ if b' < a' then (a' - b') else 0
+     else return $ a' - b'
+| ```(%%a / %%b) := fail "no support for div"
 | ```(neg %%a) := neg <$> as_int a
-| _ := none
+| _ := fail "unknown case in as_int"
 
 meta def expr_of_nat (ty : expr) : nat → tactic expr
-| 0 := to_expr `(@zero %%ty _)
-| 1 := to_expr `(@one %%ty _)
+| 0 := to_expr ``(@zero %%ty _)
+| 1 := to_expr ``(@one %%ty _)
 | n :=
   do r ← expr_of_nat (n / 2),
   if n % 2 = 0
-  then to_expr `(@bit0 %%ty _ %%r)
-  else to_expr `(@bit1 %%ty _ _ %%r)
+  then to_expr ``(@bit0 %%ty _ %%r)
+  else to_expr ``(@bit1 %%ty _ _ %%r)
 
 meta def expr_of_int (ty : expr) : int → tactic expr
 | (int.of_nat n) := expr_of_nat ty n
 | (int.neg_succ_of_nat n) :=
-expr_of_nat ty (n + 1) >>= fun i, to_expr ``(- %%i)
+if ty = ```(nat)
+then to_expr ``(zero)
+else expr_of_nat ty (nat.succ n) >>= fun i, to_expr ``(- %%i)
 
-meta def is_numeral (e : expr) : bool :=
-(as_int e).is_some
+meta def is_numeral (e : expr) : tactic bool :=
+(as_int e >> return tt) <|> return ff
 
 meta def is_div : expr → bool
 | ```(%%a / %%b) := tt

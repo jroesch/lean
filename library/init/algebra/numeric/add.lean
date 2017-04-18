@@ -22,32 +22,32 @@ match view_bits lhs rhs with
 | some bv :=
 match bv with
 | both_bit1 a b :=
-  do sum ← to_expr `(%%a + %%b + 1),
+  do sum ← to_expr ``(%%a + %%b + 1),
      (nval, prf) ← normalize sum,
      final_prf ← to_expr ``(bit1_add_bit1 %%a %%b %%nval %%prf),
      return (norm_value, final_prf)
 | both_bit0 a b :=
-  do sum ← to_expr `(%%a + %%b),
+  do sum ← to_expr ``(%%a + %%b),
      (nval, prf) ← normalize sum,
      final_prf ← to_expr ``(bit0_add_bit0 %%a %%b %%nval %%prf),
      return (norm_value, final_prf)
 | bit1_bit0 a b :=
-  do sum ← to_expr `(%%a + %%b),
+  do sum ← to_expr ``(%%a + %%b),
      (nval, prf) ← normalize sum,
      final_prf ← to_expr ``(bit1_add_bit0 %%a %%b %%nval %%prf),
      return (norm_value, final_prf)
 | bit0_bit1 a b :=
-  do sum ← to_expr `(%%a + %%b),
+  do sum ← to_expr ``(%%a + %%b),
      (nval, prf) ← normalize sum,
      final_prf ← to_expr ``(bit0_add_bit1 %%a %%b %%nval %%prf),
      return (norm_value, final_prf)
 | bit1_one tt a :=
-  do add1 ← to_expr `(%%a + 1),
+  do add1 ← to_expr ``(%%a + 1),
      (nval, prf) ← normalize add1,
      final_prf ← to_expr ``(bit1_add_one %%a %%nval %%prf),
      return (norm_value, final_prf)
 | bit1_one ff a :=
-  do add1 ← to_expr `(%%a + 1),
+  do add1 ← to_expr ``(%%a + 1),
      (nval, prf) ← normalize add1,
      final_prf ← to_expr ``(one_add_bit1 %%a %%nval %%prf),
      return (norm_value, final_prf)
@@ -60,7 +60,8 @@ match bv with
      final_prf ← to_expr ``(one_add_bit0 %%a %%nval %%prf),
      return (norm_value, final_prf)
 | both_one :=
-do prf ← to_expr ``(one_plus_one),
+do ty ← current_ty,
+   prf ← to_expr ``(@one_plus_one %%ty _ _),
    return (norm_value, prf)
 | any_zero tt a :=
 do prf ← to_expr ``(numeric.lemmas.zero_add %%a),
