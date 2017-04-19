@@ -256,6 +256,8 @@ FOREACH(T ${LEANSLOWTESTS})
 ENDFOREACH(T)
 
 # LEAN NATIVE TESTS
+if ("${ALPHA}" MATCHES "ON")
+
 file(GLOB LEANNATIVETESTS "${LEAN_SOURCE_DIR}/../tests/lean/native_run/*.lean")
  FOREACH(T ${LEANNATIVETESTS})
    GET_FILENAME_COMPONENT(T_NAME ${T} NAME)
@@ -264,6 +266,7 @@ file(GLOB LEANNATIVETESTS "${LEAN_SOURCE_DIR}/../tests/lean/native_run/*.lean")
             COMMAND bash "./test_single.sh" "${CMAKE_CURRENT_BINARY_DIR}/lean" ${T_NAME})
  ENDFOREACH(T)
 
+endif()
 # # LEAN DOCS
 # file(GLOB LEANDOCS "${LEAN_SOURCE_DIR}/../doc/lean/*.org")
 # FOREACH(T ${LEANDOCS})
