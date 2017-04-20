@@ -7,9 +7,55 @@ import init.data.int
 
 open tactic
 
+inductive rational
+| frac : int → int → rational
+| integer : int → rational
+
+section
+
+open rational
+
+def rational.add : rational → rational → rational
+| (frac i j) (frac a b) := frac (i * a + j * b) (a * b)
+| (frac i j) (integer x) := frac (i + x * j) j
+| (integer x) (frac i j) := frac (i + x * j) j
+| (integer x) (integer y) := integer $ x + y
+
+instance rat_has_add : has_add rational :=
+⟨ rational.add ⟩
+
+def rational.sub : rational → rational → rational
+| (frac i j) (frac a b) := frac (i * a - j * b) (a * b)
+| (frac i j) (integer x) := frac (i - x * j) j
+| (integer x) (frac i j) := frac (x * j - i) j
+| (integer x) (integer y) := integer $ x - y
+
+instance rat_has_sub : has_sub rational :=
+⟨ rational.sub ⟩
+
+def rational.mul : rational → rational → rational
+| (frac i j) (frac a b) := frac (i * a) (j * b)
+| (frac i j) (integer x) := frac (i * x) j
+| (integer x) (frac i j) := frac (x * i) j
+| (integer x) (integer y) := integer $ x * y
+
+instance rat_has_mul : has_mul rational :=
+⟨ rational.mul ⟩
+
+def rational.div : rational → rational → rational
+| (frac i j) (frac a b) := (frac i j) * (frac b a)
+| (frac i j) (integer x) := (frac i j) * (frac 1 x)
+| (integer x) (frac i j) := (integer x) * (frac j i)
+| (integer x) (integer y) := frac x y
+
+instance rat_has_div : has_div rational :=
+⟨ rational.div ⟩
+
+end
+
 meta def as_int : expr → tactic int
-| ```(zero) := some 0
-| ```(one) := some 1
+| ```(zero) := return 0
+| ```(one) := return 1
 | ```(bit0 %%bits) :=
   do i' ← as_int bits,
      return $ 2 * i'
@@ -31,7 +77,14 @@ meta def as_int : expr → tactic int
      if ty = ```(nat)
      then return $ if b' < a' then (a' - b') else 0
      else return $ a' - b'
-| ```(%%a / %%b) := fail "no support for div"
+| ```(%%a / %%b) :=
+  do a' ← as_int a,
+     b' ← as_int b,
+     ty ← infer_type a,
+     if ty = ```(nat)
+     then fail "nat div is not supported"
+     else return $ a' / b'
+
 | ```(neg %%a) := neg <$> as_int a
 | _ := fail "unknown case in as_int"
 

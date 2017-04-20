@@ -136,11 +136,42 @@ begin
 simp_using_hs, rw [-hced, nat.add_sub_cancel]
 end
 
-lemma mul_zero [add_monoid α] (a : α) : a * zero = zero :=
+lemma mul_zero [mul_zero_class α] (a : α) : a * zero = zero :=
 by simp
 
-lemma zero_mul [add_monoid α] (a : α) : zero + a = a :=
+lemma zero_mul [mul_zero_class α] (a : α) : zero * a = zero :=
 by simp
+
+lemma one_mul_any [monoid α] (a a' : α) (h : a = a') : one * a = a' :=
+by { rw -h, simp }
+
+lemma any_mul_one [monoid α] (a a' : α) (h : a = a') : a * one = a' :=
+by { rw -h, simp }
+
+lemma subst_into_prod [has_mul α] (l r tl tr t : α) (prl : l = tl) (prr : r = tr) (prt : tl * tr = t) : l * r = t :=
+by simp [prl, prr, prt]
+
+lemma neg_mul_pos [has_mul α] [has_neg α] (a b c : α) (h : a * b = c) : -a * b = -c := sorry
+lemma pos_mul_neg [has_mul α] [has_neg α] (a b c : α) (h : a * b = c) : a * -b = -c := sorry
+lemma neg_mul_neg [has_mul α] [has_neg α] (a b c : α) (h : a * b = c) : -a * -b = c := sorry
+
+lemma bit0_mul_any [distrib α] [has_one α] (a b c : α) (h : a * b = c) : bit0 a * b = bit0 c :=
+begin
+  unfold bit0,
+  rewrite -h,
+  rewrite right_distrib,
+end
+
+lemma any_mul_bit0 [semiring α] (a b c : α) (h : a * b = c) : a * bit0 b = bit0 c :=
+by { rw -(bit0_mul_any a b c h), simp }
+
+lemma any_mul_bit1 [semiring α] (a b s t : α) (hs : a * b = s) (ht : bit0 s + a  = t) :
+        a * (bit1 b) = t :=
+by simp [hs, ht]
+
+lemma bit1_mul_any [semiring α] (a b s t : α) (hs : a * b = s) (ht : bit0 s + b  = t) :
+        (bit1 a) * b = t :=
+by simp [hs, ht]
 
 end lemmas
 end numeric

@@ -73,9 +73,16 @@ protected def mul : ℤ → ℤ → ℤ
 | -[1+ m]    (of_nat n) := neg_of_nat (succ m * n)
 | -[1+ m]    -[1+ n]    := of_nat (succ m * succ n)
 
+protected def div :  ℤ → ℤ → ℤ
+| (of_nat m) (of_nat n) := of_nat (m / n)
+| (of_nat m) -[1+ n]    := neg_of_nat (m / succ n)
+| -[1+ m]    (of_nat n) := neg_of_nat (succ m / n)
+| -[1+ m]    -[1+ n]    := of_nat (succ m / succ n)
+
 instance : has_neg ℤ := ⟨int.neg⟩
 instance : has_add ℤ := ⟨int.add⟩
 instance : has_mul ℤ := ⟨int.mul⟩
+instance : has_div ℤ := ⟨int.div⟩
 
 lemma of_nat_add (n m : ℕ) : of_nat (n + m) = of_nat n + of_nat m := rfl
 lemma of_nat_mul (n m : ℕ) : of_nat (n * m) = of_nat n * of_nat m := rfl

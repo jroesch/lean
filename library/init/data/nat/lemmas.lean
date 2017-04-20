@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Leonardo de Moura, Jeremy Avigad
 -/
 prelude
-import init.data.nat.basic init.data.nat.div init.data.nat.pow init.meta init.algebra.functions
+import init.data.nat.basic init.data.nat.div
+import init.data.nat.pow init.meta init.algebra.functions
 
 namespace nat
 attribute [pre_smt] nat_zero_eq_zero
