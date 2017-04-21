@@ -21,4 +21,5 @@ add_library(library OBJECT deep_copy.cpp expr_lt.cpp io_state.cpp
   eval_helper.cpp
   messages.cpp message_builder.cpp module_mgr.cpp comp_val.cpp
   documentation.cpp check.cpp arith_instance.cpp parray.cpp process.cpp
-  pipe.cpp handle.cpp)
+  pipe.cpp handle.cpp
+  numeric_normalizer.cpp)

@@ -224,6 +224,7 @@ name const * g_nat_le_refl = nullptr;
 name const * g_ne = nullptr;
 name const * g_neg = nullptr;
 name const * g_neq_of_not_iff = nullptr;
+/* old ones */
 name const * g_norm_num_add1 = nullptr;
 name const * g_norm_num_add1_bit0 = nullptr;
 name const * g_norm_num_add1_bit1_helper = nullptr;
@@ -271,6 +272,10 @@ name const * g_norm_num_subst_into_div = nullptr;
 name const * g_norm_num_subst_into_prod = nullptr;
 name const * g_norm_num_subst_into_subtr = nullptr;
 name const * g_norm_num_subst_into_sum = nullptr;
+/* new ones */
+name const * g_numeric_normalizer_lemmas_subst_into_sum = nullptr;
+
+/* end new ones */
 name const * g_not = nullptr;
 name const * g_not_of_iff_false = nullptr;
 name const * g_not_of_eq_false = nullptr;
@@ -598,6 +603,7 @@ void initialize_constants() {
     g_ne = new name{"ne"};
     g_neg = new name{"neg"};
     g_neq_of_not_iff = new name{"neq_of_not_iff"};
+    /* here */
     g_norm_num_add1 = new name{"norm_num", "add1"};
     g_norm_num_add1_bit0 = new name{"norm_num", "add1_bit0"};
     g_norm_num_add1_bit1_helper = new name{"norm_num", "add1_bit1_helper"};
@@ -645,6 +651,9 @@ void initialize_constants() {
     g_norm_num_subst_into_prod = new name{"norm_num", "subst_into_prod"};
     g_norm_num_subst_into_subtr = new name{"norm_num", "subst_into_subtr"};
     g_norm_num_subst_into_sum = new name{"norm_num", "subst_into_sum"};
+    /* here */
+    g_numeric_normalizer_lemmas_subst_into_sum = new name{"numeric", "normalizer", "lemmas", "subst_into_sum"};
+    /* end */
     g_not = new name{"not"};
     g_not_of_iff_false = new name{"not_of_iff_false"};
     g_not_of_eq_false = new name{"not_of_eq_false"};
