@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jared Roesch, and Robert Y. Lewis
 */
 #include "library/trace.h"
-#include "library/norm_num.h"
+#include "library/numeric_normalizer.h"
 #include "library/util.h"
 #include "library/constants.h"
 #include "library/comp_val.h"
