@@ -29,11 +29,11 @@ lemma subst_into_sum [has_add α] (l r tl tr t : α) (prl : l = tl) (prr : r = t
         (prt : tl + tr = t) : l + r = t :=
 by rw [-prt, prr, prl]
 
-lemma add_zero [add_monoid α] (a : α) : a + zero = a :=
-by simp
+lemma add_zero [has_add α] [has_zero α] [is_right_id α (+) zero] (a : α) : a + zero = a :=
+by apply is_right_id.right_id
 
-lemma zero_add [add_monoid α] (a : α) : zero + a = a :=
-by simp
+lemma zero_add [has_add α] [has_zero α] [is_left_id α (+) zero] (a : α) : zero + a = a :=
+by apply is_left_id.left_id
 
 lemma one_plus_one [has_one α] [has_add α] : 1 + 1 = (2 : α) :=
 begin
@@ -56,25 +56,39 @@ end
 lemma neg_congr [has_neg α] (bits bits' : α) (h : bits = bits') : neg bits = neg bits' :=
 by rw -h
 
-lemma subst_into_subtr [add_group α] (l r t : α) (h : l + -r = t) : l - r = t :=
-by simp [h]
+lemma subst_into_subtr [has_neg α] [has_add α] [has_zero α] (l r t : α) (h : l + -r = t) : l - r = t :=
+begin
+rw -h,
+assert r_eq : r = 0 + r,
+end
 
 lemma bit0_add_one [has_one α] [has_add α] (a a' : α) (h : a = a') : bit0 a + 1 = bit1 a' :=
 begin
     rw h,
 end
 
-lemma one_add_bit0 [has_one α] [add_comm_semigroup α] (a a' : α) (h : a = a') : 1 + bit0 a = bit1 a' :=
+lemma one_add_bit0 [has_one α] [has_add α] [is_commutative α (+)] (a a' : α) (h : a = a') : 1 + bit0 a = bit1 a' :=
 begin
     unfold bit1,
     rewrite h,
-    rewrite add_comm,
+    apply is_commutative.comm
 end
 
-lemma bit1_add_one [has_one α] [add_comm_semigroup α] (a r : α) (h : a + 1 = r) : bit1 a + 1 = bit0 r :=
+lemma bit1_add_one [has_one α] [has_add α] [is_commutative α (+)] [is_associative α (+)] (a r : α) (h : a + 1 = r) : bit1 a + 1 = bit0 r :=
 begin
 unfold bit1 bit0,
-rsimp,
+rewrite -h,
+assert is_comm : forall (a b : α), a + b = b + a,
+apply is_commutative.comm,
+assert is_assoc : forall (a b c : α), (a + b) + c = a + (b + c),
+apply is_associative.assoc,
+clear h,
+simp_using_hs,
+apply congr,
+reflexivity,
+rewrite is_comm,
+rewrite (is_comm a 1),
+rewrite -is_assoc,
 end
 
 lemma one_add_bit1 [has_one α] [add_comm_semigroup α] (a r : α) (h : a + 1 = r) : 1 + bit1 a = bit0 r :=
