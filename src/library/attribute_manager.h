@@ -211,47 +211,60 @@ struct indices_attribute_data : public attr_data {
 };
 
 struct key_value_data : public attr_data {
-    // generalize: name_map<std::string> m_pairs;
-    std::string m_symbol;
-    std::string m_library;
+    name_map<std::string> m_pairs;
 
     virtual unsigned hash() const override {
-        // unsigned h = 0;
-        // // This isn't right ..., well maybe? I don't really know.
-        // // Rust's Hash trait is super good at this.
-        // m_pairs.for_each([&] (name const & n, std::string const & value) {
-        //         h += n.hash();
-        //         // h += ::lean::hash_str(value, h);
-        // });
-        return 0;
+        unsigned h = 0;
+        m_pairs.for_each([&] (name const & n, std::string const & value) {
+            h = ::lean::hash(h, n.hash());
+            h = ::lean::hash_str(h, value);
+        });
+        return h;
     }
 
     void write(serializer & s) const {
-        s << m_symbol;
-        s << m_library;
+        m_pairs.for_each([&] (name const & n, std::string const & value) {
+            s << n;
+            s << value;
+        });
     }
 
     void read(deserializer & d) {
-        std::string m_symbol, m_library;
-        d >> m_symbol;
-        d >> m_library;
+        m_pairs = read_map<name, std::string, name_quick_cmp>(d);
     }
 
     void parse(abstract_parser & p) override {
-        std::cout << "in extern parser" << std::endl;
-        std::string n = p.parse_string_lit();
-        std::string l = p.parse_string_lit();
-        std::cout << "link symbol: " << n << std::endl;
-        std::cout << "library symbol: " << l << std::endl;
-        this->m_symbol = n;
-        this->m_library = l;
+        if (p.curr_is_left_paren()) {
+            p.next();
+            while (!p.curr_is_right_paren()) {
+                name key = p.parse_name();
+                if (!p.curr_is_eq()) {
+                    throw exception("parse error expected equals");
+                }
+                p.next();
+                std::string value = p.parse_string_lit();
+                m_pairs.insert(key, value);
+                // The follow set should only be "," or ")", we can continue, then fall out of loop,
+                // consume the comma and continue, or error.
+                if (p.curr_is_comma()) {
+                    p.next();
+                } else if (p.curr_is_right_paren()) {
+                    continue;
+                } else {
+                    throw exception("parse error, expected comma");
+                }
+            }
+            p.next();
+        } else {
+            // todo: error reporting
+            throw exception("parse error in extern attr");
+        }
     }
 
     virtual void print(std::ostream & out) override {
-        out << "external";
-        // for (auto p : m_idxs) {
-        //    out << " " << p + 1;
-        // }
+        m_pairs.for_each([&] (name const & key, std::string const & value) {
+            out << key << "=" << value;
+        });
     }
 };
 

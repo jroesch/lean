@@ -12,6 +12,7 @@ Author: Leonardo de Moura
 #include <cstring>
 #include "util/extensible_object.h"
 #include "util/list.h"
+#include "util/rb_map.h"
 #include "util/buffer.h"
 #include "util/int64.h"
 #include "util/optional.h"
@@ -136,6 +137,36 @@ optional<T> read_optional(deserializer & d) {
     } else {
         return optional<T>();
     }
+}
+
+template<typename K, typename V, typename CMP>
+serializer & write_map(serializer & s, rb_map<K, V, CMP> const & ls) {
+    s << length(ls);
+    for (auto const & e : ls)
+        s << e;
+    return s;
+}
+
+template<typename K, typename V, typename CMP, typename R>
+rb_map<K, V, CMP> read_map(deserializer & d, R && t_reader) {
+    unsigned num = d.read_unsigned();
+    rb_map<K, V, CMP> map;
+    for (unsigned i = 0; i < num; i++) {
+        auto tuple = t_reader(d);
+        map.insert(tuple.first, tuple.second);
+    }
+    return map;
+}
+
+template<typename K, typename V, typename CMP>
+rb_map<K, V, CMP> read_map(deserializer & d) {
+    return read_map<K, V, CMP>(d, [](deserializer & d) {
+        K key;
+        V value;
+        d >> key;
+        d >> value;
+        return std::pair<K, V>(key, value);
+    });
 }
 
 template<typename T>

@@ -113,6 +113,7 @@ class parser : public abstract_parser {
     expr parse_numeral_expr(bool user_notation = true);
     expr parse_decimal_expr();
     expr parse_string_expr();
+
     expr parse_char_expr();
     expr parse_inst_implicit_decl();
     void parse_inst_implicit_decl(buffer<expr> & r);
@@ -258,6 +259,11 @@ public:
     bool curr_is_identifier() const { return curr() == token_kind::Identifier; }
     /** \brief Return true iff the current token is a numeral */
     virtual bool curr_is_numeral() const final override { return curr() == token_kind::Numeral; }
+    virtual bool curr_is_left_paren() const final override;
+    virtual bool curr_is_right_paren() const final override;
+    virtual bool curr_is_comma() const final override;
+    virtual bool curr_is_eq() const final override;
+
     bool curr_is_decimal() const { return curr() == token_kind::Decimal; }
     /** \brief Return true iff the current token is a string */
     bool curr_is_string() const { return curr() == token_kind::String; }
@@ -306,6 +312,7 @@ public:
     unsigned get_small_nat();
     virtual unsigned parse_small_nat() override final;
     virtual std::string parse_string_lit() override final;
+    virtual name parse_name() override final;
     double parse_double();
 
     bool parse_local_notation_decl() { return parse_local_notation_decl(nullptr); }

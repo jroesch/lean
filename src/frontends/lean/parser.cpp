@@ -349,6 +349,22 @@ bool parser::curr_is_token(name const & tk) const {
         get_token_info().value() == tk;
 }
 
+bool parser::curr_is_left_paren() const {
+    return curr_is_token(get_lparen_tk());
+}
+
+bool parser::curr_is_right_paren() const {
+    return curr_is_token(get_rparen_tk());
+}
+
+bool parser::curr_is_comma() const {
+    return curr_is_token(get_comma_tk());
+}
+
+bool parser::curr_is_eq() const {
+    return curr_is_token(name{"="});
+}
+
 bool parser::curr_is_token_or_id(name const & tk) const {
     if (curr() == token_kind::Keyword || curr() == token_kind::CommandKeyword)
         return get_token_info().value() == tk;
@@ -638,6 +654,17 @@ unsigned parser::get_small_nat() {
         return 0;
     }
     return val.get_unsigned_int();
+}
+
+name parser::parse_name() {
+    name n;
+    if (curr() != token_kind::Identifier) {
+        maybe_throw_error({"invalid numeral, value does not fit in a machine integer", pos()});
+    } else {
+        n = get_name_val();
+    }
+    next();
+    return n;
 }
 
 std::string parser::parse_string_lit() {

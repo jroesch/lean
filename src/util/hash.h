@@ -14,6 +14,10 @@ void mix(unsigned & a, unsigned & b, unsigned & c);
 
 unsigned hash_str(unsigned len, char const * str, unsigned init_value);
 
+inline unsigned hash_str(unsigned init_value, std::string str) {
+    return hash_str(str.size(), str.c_str(), init_value);
+}
+
 inline unsigned hash(unsigned h1, unsigned h2) {
     h2 -= h1; h2 ^= (h1 << 8);
     h1 -= h2; h2 ^= (h1 << 16);
