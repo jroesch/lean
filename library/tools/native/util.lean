@@ -20,7 +20,8 @@ namespace cpp_compiler
 
 def with_config (cfg : config) : cpp_compiler :=
 { library_paths := cfg.library_path.to_buffer,
-  include_paths := cfg.include_path.to_buffer }
+  include_paths := cfg.include_path.to_buffer,
+  output := cfg.binary_name }
 
 /-- Configure a C++ compiler in the default executable mode. -/
 def mk_executable (opt_cc : option native.config := none) : cpp_compiler :=

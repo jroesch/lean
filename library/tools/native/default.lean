@@ -741,10 +741,9 @@ meta def load_backends : tactic (list native.backend) := do
   backends_list_expr ← get_backends,
   tactic.eval_expr (list native.backend) backends_list_expr
 
-meta def execute_backend (ctxt : ir.context) (backend : native.backend) : tactic unit := do
-  tactic.trace "about to execute backend",
-  backend^.compiler ctxt
-
+meta def execute_backend (ctxt : ir.context) (bend : native.backend) : tactic unit := do
+  tactic.trace $ "Compiling with backend: " ++ bend.name,
+  bend.compiler ctxt
 
 meta def execute_backends (cfg : config) (backends : list native.backend) (ctxt : ir.context) : tactic unit :=
   do let backend_name := cfg.backend,

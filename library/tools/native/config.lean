@@ -13,6 +13,7 @@ structure config :=
 (backend : string := "c++")
 (include_path : list string)
 (library_path : list string)
+(binary_name : string)
 
 open tactic
 
@@ -25,6 +26,7 @@ do opts ← get_options,
    let lib_path := opts.get_string `native.library_path "" ,
    let inc_path := opts.get_string `native.include_path "",
    let backend := opts.get_string `native.backend "c++",
+   let binary_name := opts.get_string `native.binary "lean.out",
    let lib_path := parse_path_var lib_path ++ [get_install_path ++ "lib"],
    let inc_path := parse_path_var inc_path ++  [get_install_path ++ "include/lean_ext"],
    -- tactic.trace $ "IncludePath: " ++ to_string inc_path,
@@ -34,6 +36,7 @@ do opts ← get_options,
      library_path := lib_path,
      include_path := inc_path,
      backend := backend,
+     binary_name := binary_name,
   }
 
 end native
