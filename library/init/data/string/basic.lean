@@ -142,12 +142,8 @@ l.foldl (λ r s, r ++ s) ""
 def singleton (c : char) : string :=
 empty.push c
 
-private def replace_char_imp (c : char) (replacement : list char) : list char → list char
-| [] := []
-| (s :: ss) :=
-  if c = s
-  then replacement ++ replace_char_imp ss
-  else s :: replace_char_imp ss
+def intercalate (s : string) (ss : list string) : string :=
+(list.intercalate s.to_list (ss.map to_list)).as_string
 
 namespace iterator
 def nextn : iterator → nat → iterator
@@ -156,22 +152,13 @@ def nextn : iterator → nat → iterator
 
 def prevn : iterator → nat → iterator
 | it 0     := it
-| (h :: tail) :=
-if h = c
-then [] :: split_on_core tail
-else match split_on_core tail with
-| [] := (h :: []) :: []
 | it (i+1) := prevn it.prev i
 end iterator
 
 def pop_back (s : string) : string :=
-| ⟨ str ⟩ := list.reverse $
-  list.map (fun lc, ⟨ lc ⟩) $
 s.mk_iterator.to_end.prev.prev_to_string
 
 def popn_back (s : string) (n : nat) : string :=
-if str.to_list.head = c
-then bool.tt
 (s.mk_iterator.to_end.prevn n).prev_to_string
 
 def backn (s : string) (n : nat) : string :=
