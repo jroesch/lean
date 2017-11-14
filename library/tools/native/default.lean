@@ -754,7 +754,7 @@ meta def execute_backends (cfg : config) (backends : list native.backend) (ctxt 
      | some backend := execute_backend ctxt backend
      end
 
-meta def compile (extern_fns : list extern_fn) (procs : list procedure) : tactic format := do
+meta def compile (extern_fns : list extern_fn) (procs : list procedure) : tactic unit := do
 do cfg ← load_config,
    ctxt ← new_context,
    backends ← load_backends,
@@ -762,7 +762,6 @@ do cfg ← load_config,
    | except.error e := tactic.fail $ error.to_string e
    | except.ok ctxt' := pure ctxt'
    end,
-   execute_backends cfg backends ctxt',
-   return ""
+   execute_backends cfg backends ctxt'
 
 end native

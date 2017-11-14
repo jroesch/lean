@@ -197,7 +197,7 @@ lean::vm_obj to_lean_extern_fns(buffer<extern_fn> & extern_fns) {
     return externs_list;
 }
 
-format invoke_native_compiler(
+void invoke_native_compiler(
     environment const & env,
     buffer<extern_fn> & extern_fns,
     buffer<procedure> & procs)
@@ -251,7 +251,7 @@ format invoke_native_compiler(
     }
 
     if (is_constructor(tactic_obj) && cidx(tactic_obj) == 0) {
-        return to_format(cfield(tactic_obj , 0));
+        return;
     } else if (auto except = tactic::is_exception(S, tactic_obj)) {
         auto msg = std::get<0>(*except);
         throw lean::exception((sstream() << msg).str());
@@ -277,10 +277,7 @@ void native_compile(environment const & env,
                     native_compiler_mode mode) {
     auto conf = native::get_config();
     auto output_path = get_code_path();
-    // std::fstream out(output_path, std::ios_base::out);
-    auto fmt = invoke_native_compiler(env, extern_fns, procs);
-    // out << fmt << "\n\n";
-    // out.close();
+    invoke_native_compiler(env, extern_fns, procs);
 }
 
 void native_preprocess(environment const & env, declaration const & d, buffer<procedure> & procs) {
