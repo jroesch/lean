@@ -7,12 +7,12 @@ Authors: Jared Roesch
 import tools.native.ir
 import tools.native.ir.builder
 import tools.native.ir.compiler
-import tools.native.ir.internal
 import tools.native.ir.anf
 import tools.native.ir.cf
 import tools.native.ir.pass
 import tools.native.ir.util
 
+import tools.native.internal
 import tools.native.config
 import tools.native.backend
 import tools.native.backends.cpp
@@ -735,7 +735,7 @@ meta def new_context : tactic ir.context := do
   decls ← eval_expr (list ir.decl) decls_list_expr,
   defns ← eval_expr (list ir.defn) defns_list_expr,
   types ← eval_expr (list ir.type_decl) types_list_expr,
-  return $ ir.new_context decls defns types
+  return $ ir.context.new decls defns types
 
 meta def load_backends : tactic (list native.backend) := do
   backends_list_expr ← get_backends,

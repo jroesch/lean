@@ -4,10 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jared Roesch
 -/
 
-import tools.native.ir.internal
+import tools.native.internal
 import tools.native.ir.builtin
 import system.except
-import init.data.nat.lemmas
 
 namespace native
 

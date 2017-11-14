@@ -8,7 +8,7 @@ import tools.native.ir.builtin
 import tools.native.ir.util
 import tools.native.ir.pass
 import tools.native.ir.procedure
-import tools.native.ir.internal
+import tools.native.internal
 import tools.native.config
 
 open native

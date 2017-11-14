@@ -4,11 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jared Roesch
 -/
 
-import init.data.bool.basic
+import .internal
 
 namespace native
-
-meta constant get_install_path : string
 
 structure config :=
 (debug : bool := bool.ff)
