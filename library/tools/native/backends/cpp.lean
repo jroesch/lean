@@ -13,6 +13,27 @@ import tools.native.backend
 import tools.native.attributes
 import tools.native.util
 
+
+section string_iterate
+
+open string
+
+-- def iterator_rel : iterator → iterator → iterator_rel
+meta def iterate (step : char → option string) : iterator → iterator
+| src :=
+  if src.has_next
+  then
+    match step src.curr with
+    | none := iterate src.next
+    | some str := iterate (src.insert str).next
+    end
+  else src
+
+end string_iterate
+
+meta def string.replace_char (to_replace : char) (replacement : string) (str : string) : string :=
+(iterate (λ c, if c = to_replace then replacement else none) str.mk_iterator).to_string
+
 meta def comma_sep (items : list format) : format :=
 format.sep_by (format.of_string "," ++ format.space) items
 
@@ -113,6 +134,7 @@ meta def expr' : ir.expr → format
 | (ir.expr.call (ir.symbol.name `index) (buf :: index :: _)) :=
   mangle_symbol buf ++ "[" ++ mangle_symbol index ++ "]"
 | (ir.expr.call f xs) := mk_call f xs
+| _ := "NYI"
 
 meta def default_case (body : format) : format :=
 to_fmt "default: " ++ block body
@@ -313,7 +335,10 @@ meta def write_and_compile [io.interface] (cfg : config) (path : string) (data :
 do handle ← io.mk_file_handle path io.mode.write,
    io.fs.write handle data,
    io.fs.close handle,
-   let cpp := { add_shared_dependencies $ cpp_compiler.mk_executable cfg with files := [path].to_buffer },
+   let cpp := { add_shared_dependencies $ cpp_compiler.mk_executable cfg with
+      files := [path].to_buffer,
+      warnings := ["no-return-type-c-linkage"].to_buffer,
+   },
    cpp_compiler.run cpp,
    return ()
 

@@ -36,6 +36,13 @@ match opt_cc with
 | some cfg := with_config cfg
 end
 
+def before {α : Type} (el : α) (buf : list α) : list α :=
+list.join (list.map (fun x, [el, x]) buf)
+
+def right_before (el : string) (buf : list string) : list string :=
+buf.map (fun x, el ++ x)
+
+-- deprecated remove me
 def insert_before {α : Type} (el : α) (buf : buffer α) : buffer α :=
 list.to_buffer $ list.join (list.map (fun x, [el, x]) buf.to_list)
 
@@ -49,7 +56,7 @@ let cmd := cc.cc,
     debug := if cc.debug then ["-debug"] else [],
     shared := if cc.shared then ["-shared"] else [],
     pic := if cc.pic then ["-fPIC"] else [],
-    warnings := insert_before "-W" cc.warnings,
+    warnings := right_before "-W" cc.warnings.to_list,
     output := match cc.output with
     | none := []
     | some of := ["-o", of]
@@ -64,7 +71,7 @@ in {
     debug,
     shared,
     pic,
-    warnings.to_list,
+    warnings,
     output
   ]
 }

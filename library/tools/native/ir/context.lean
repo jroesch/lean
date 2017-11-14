@@ -1,6 +1,7 @@
 import tools.native.ir.syntax
 
-namespace native.ir
+namespace native
+namespace ir
 
 meta structure context :=
   (items : rb_map name ir.item)
@@ -32,4 +33,5 @@ meta def context.to_items (ctx : context) : list ir.item :=
 meta def context.get_main_fn (ctxt : context) : option ir.item :=
 ctxt.lookup_item "___lean__main"
 
-end native.ir
+end ir
+end native

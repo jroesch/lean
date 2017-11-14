@@ -137,14 +137,14 @@ meta def hoist
   (kont : list name → anf_monad expr) : list expr → anf_monad expr
 | [] := kont []
 | es :=
-  do ns ← monad.for es $ (fun x, do
+  do ns ← monad.mapm (λ x, do
      value ← anf x,
      if expr.is_local_constant value
      then return (expr.local_uniq_name value)
      else do
       fresh ← fresh_name,
       let_bind fresh mk_neutral_expr value,
-      return fresh),
+      return fresh) es,
      kont ns
 
 private meta def anf_constructor (head : expr) (args : list expr) (anf : expr → anf_monad expr) : anf_monad expr :=

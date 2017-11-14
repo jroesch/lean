@@ -465,14 +465,19 @@ void compile_with_external_backend(environment const & env, declaration const & 
     native_compile(env, extern_fns, all_procs, native_compiler_mode::Executable);
 }
 
+static vm_obj get_install_path_lean() {
+    return to_obj(get_install_path());
+}
 
 void initialize_native_compiler() {
     native::initialize_options();
     initialize_install_path();
+
     register_trace_class({"compiler", "native"});
     register_trace_class({"compiler", "native", "preprocess"});
     register_trace_class({"compiler", "native", "cpp_compiler"});
-    // register_trace_class({"sys_process"});
+
+    DECLARE_VM_BUILTIN(name({"native", "get_install_path"}), get_install_path_lean);
 }
 
 void finalize_native_compiler() {

@@ -504,7 +504,7 @@ meta def compile_expr_to_ir_stmt : expr → ir_compiler ir.stmt
   end
 | (expr.var i) := mk_error "there should be no bound variables in compiled terms"
 | (expr.sort _) := mk_error "found sort"
-| (expr.mvar _ _) := mk_error "unexpected meta-variable in expr"
+| (expr.mvar _ _ _)  := mk_error "unexpected meta-variable in expr"
 | (expr.local_const n _ _ _) := ir.stmt.e <$> (ir.expr.sym <$> compile_local n)
 | (expr.app f x) :=
   let head := expr.get_app_fn (expr.app f x),
@@ -744,6 +744,7 @@ meta def load_backends : tactic (list native.backend) := do
 meta def execute_backend (ctxt : ir.context) (backend : native.backend) : tactic unit := do
   tactic.trace "about to execute backend",
   backend^.compiler ctxt
+
 
 meta def execute_backends (cfg : config) (backends : list native.backend) (ctxt : ir.context) : tactic unit :=
   do let backend_name := cfg.backend,

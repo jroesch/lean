@@ -38,7 +38,7 @@ meta def get_attribute_body (attr : name) (type : expr) : tactic expr := do
 
 meta def get_attribute_bodies (attr : name) (type : expr) : tactic expr := do
   names ← attribute.get_instances attr,
-  bodies ← monad.for names (fun n, get_attribute_body n type),
+  bodies ← monad.mapm (fun n, get_attribute_body n type) names,
   make_list type bodies
 
 meta def get_ir_decls : tactic expr := do
