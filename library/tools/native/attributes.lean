@@ -1,19 +1,19 @@
-@[user_attribute] def ir_def : user_attribute := {
+@[user_attribute] meta def ir_def : user_attribute := {
   name := `ir_def,
   descr := "makes the IR definition availible to the native compiler"
 }
 
-@[user_attribute] def ir_decl : user_attribute := {
+@[user_attribute] meta def ir_decl : user_attribute := {
   name := `ir_decl,
   descr := "makes the IR declaration availible to the native compiler"
 }
 
-@[user_attribute] def ir_type : user_attribute := {
+@[user_attribute] meta def ir_type : user_attribute := {
   name := `ir_type,
   descr := "makes the IR type declaration availible to the native compiler"
 }
 
-@[user_attribute] def backend.attr : user_attribute := {
+@[user_attribute] meta def backend.attr : user_attribute := {
   name := `backend,
   descr := "registers the backend with the native compiler"
 }
